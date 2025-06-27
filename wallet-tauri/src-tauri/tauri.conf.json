@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "wallet-tauri",
+  "productName": "Oxidized Wallet",
   "version": "0.1.0",
-  "identifier": "be.elsewhere.wallet-tauri",
+  "identifier": "be.elsewhere.oxidized-wallet",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "wallet-tauri",
-        "width": 800,
-        "height": 600
+        "title": "Oxidized Wallet",
+        "width": 1200,
+        "height": 800,
+        "fullscreen": false,
+        "resizable": true
       }
     ],
     "security": {
