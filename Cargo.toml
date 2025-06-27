@@ -1,5 +1,6 @@
 [workspace]
-members = ["wallet-core"]
+members = ["wallet-core", "wallet-tauri/src-tauri"]
+default-members = ["wallet-core"]
 resolver = "3"
 
 [workspace.package]
