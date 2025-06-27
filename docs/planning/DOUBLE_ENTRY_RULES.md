@@ -92,8 +92,8 @@ Debit (↑)  |  Credit (↓)
 **Scenario**: Receiving 2500 EUR salary into BoursoBank checking account
 
 ```
-Date: 2024-01-31
-Description: Salaire janvier 2024
+Date: 2025-01-31
+Description: Salaire janvier 2025
 
 Entries:
 - Debit:  Assets → BoursoBank → Compte courant    +2500 EUR
@@ -106,7 +106,7 @@ Verification: 2500 EUR debit = 2500 EUR credit ✓
 **Scenario**: Spending 65 EUR on groceries, paid with checking account
 
 ```
-Date: 2024-02-01
+Date: 2025-02-01
 Description: Courses Carrefour
 
 Entries:
@@ -120,7 +120,7 @@ Verification: 65 EUR debit = 65 EUR credit ✓
 **Scenario**: 58 EUR fuel for car, paid with credit card
 
 ```
-Date: 2024-02-02
+Date: 2025-02-02
 Description: Essence Total
 
 Entries:
@@ -134,7 +134,7 @@ Verification: 58 EUR debit = 58 EUR credit ✓
 **Scenario**: Transfer 500 EUR from checking to savings account
 
 ```
-Date: 2024-02-03
+Date: 2025-02-03
 Description: Épargne mensuelle
 
 Entries:
@@ -149,7 +149,7 @@ Note: Both accounts are assets, so this is asset reallocation
 **Scenario**: Paying 200 EUR credit card balance from checking account
 
 ```
-Date: 2024-02-15
+Date: 2025-02-15
 Description: Remboursement carte de crédit
 
 Entries:

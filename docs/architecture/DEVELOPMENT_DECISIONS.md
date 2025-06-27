@@ -246,10 +246,10 @@ pub struct ImportProfile {
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
-| 2024-01-XX | Use `amount_minor` not "cents" | Support multiple currencies |
-| 2024-01-XX | NaiveDate for transactions | Simplify timezone handling |
-| 2024-01-XX | Vue 3 over React | Easier learning curve, better for forms |
-| 2024-01-XX | SQLite over PostgreSQL | Local-first requirement |
-| 2024-01-XX | Workspace versioning | Simplify multi-crate management |
+| 2025-06-27 | Use `amount_minor` not "cents" | Support multiple currencies |
+| 2025-06-27 | NaiveDate for transactions | Simplify timezone handling |
+| 2025-06-27 | Vue 3 over React | Easier learning curve, better for forms |
+| 2025-06-27 | SQLite over PostgreSQL | Local-first requirement |
+| 2025-06-27 | Workspace versioning | Simplify multi-crate management |
 
 This document will be updated as new decisions are made during development.
