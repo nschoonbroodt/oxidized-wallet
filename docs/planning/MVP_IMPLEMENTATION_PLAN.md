@@ -61,7 +61,7 @@ wallet-core/src/
 
 ---
 
-### Step 2: Implement Core Money and Account Types
+### Step 2: Implement Core Money and Account Types ✅
 **Estimated Time**: 2 hours  
 **Dependencies**: Step 1
 
@@ -179,12 +179,12 @@ pub struct Transaction {
 
 ---
 
-### Step 3: Set up SQLite with Migrations
+### Step 3: Set up SQLite with Migrations ✅
 **Estimated Time**: 1.5 hours  
 **Dependencies**: Step 2
 
 #### Tasks:
-1. **Add sqlx dependencies to wallet-core**
+1. **Add sqlx dependencies to wallet-core** ✅
 ```toml
 # wallet-core/Cargo.toml
 [dependencies]
@@ -194,7 +194,7 @@ tokio = { version = "1", features = ["full"] }
 
 2. **Create initial migration**
 ```sql
--- wallet-core/migrations/001_initial_schema.sql
+-- wallet-core/migrations/001_initial_schema.sql ✅
 CREATE TABLE accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -239,7 +239,7 @@ CREATE INDEX idx_entries_transaction ON transaction_entries(transaction_id);
 CREATE INDEX idx_entries_account ON transaction_entries(account_id);
 ```
 
-3. **Create database connection module**
+3. **Create database connection module** ✅
 ```rust
 // wallet-core/src/db/connection.rs
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};

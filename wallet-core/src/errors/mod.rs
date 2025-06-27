@@ -6,6 +6,10 @@ pub type Result<T> = std::result::Result<T, WalletError>;
 pub enum WalletError {
     #[error(transparent)]
     CurrencyError(#[from] CurrencyError),
+    #[error(transparent)]
+    DatabaseError(#[from] sqlx::Error),
+    #[error(transparent)]
+    MigrationError(#[from] sqlx::migrate::MigrateError),
 }
 
 #[derive(Error, Debug)]
