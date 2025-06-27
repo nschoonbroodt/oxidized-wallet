@@ -448,6 +448,303 @@ pub mod test_utils {
 3. **Phase 3**: Advanced validation, testing utilities
 4. **Future**: Performance optimizations, additional currency support
 
+## 🏦 Account Service Enhancements
+
+### Account Validation Improvements
+**Priority**: High  
+**Phase**: Phase 1 (MVP completion)
+
+```rust
+impl AccountService {
+    pub async fn create_account(
+        &self,
+        name: String,
+        account_type: AccountType,
+        parent_id: Option<i64>,
+        currency: Currency,
+    ) -> Result<Account> {
+        // 1. Validate parent exists if specified
+        if let Some(parent_id) = parent_id {
+            let _parent = self.repository.get_by_id(parent_id).await
+                .map_err(|_| WalletError::ParentAccountNotFound(parent_id))?;
+        }
+
+        // 2. Validate account name
+        if name.trim().is_empty() {
+            return Err(WalletError::InvalidAccountName("Name cannot be empty".to_string()));
+        }
+        
+        if name.len() > 255 {
+            return Err(WalletError::InvalidAccountName("Name too long (max 255 characters)".to_string()));
+        }
+
+        // 3. Check name uniqueness within parent
+        if self.repository.name_exists_under_parent(&name, parent_id).await? {
+            return Err(WalletError::DuplicateAccountName { 
+                name: name.clone(), 
+                parent_id 
+            });
+        }
+
+        // 4. Validate hierarchy depth (max 5 levels)
+        if let Some(parent_id) = parent_id {
+            let depth = self.calculate_account_depth(parent_id).await?;
+            if depth >= 5 {
+                return Err(WalletError::HierarchyTooDeep);
+            }
+        }
+
+        // Rest of creation logic...
+    }
+    
+    async fn calculate_account_depth(&self, account_id: i64) -> Result<u8> {
+        let mut depth = 1;
+        let mut current_id = Some(account_id);
+        
+        while let Some(id) = current_id {
+            let account = self.repository.get_by_id(id).await?;
+            current_id = account.parent_id;
+            depth += 1;
+            
+            if depth > 10 { // Safety check to prevent infinite loops
+                return Err(WalletError::HierarchyTooDeep);
+            }
+        }
+        
+        Ok(depth)
+    }
+}
+```
+
+### Account Repository Extensions
+**Priority**: High  
+**Phase**: Phase 1 (MVP completion)
+
+```rust
+impl AccountRepository {
+    pub async fn name_exists_under_parent(&self, name: &str, parent_id: Option<i64>) -> Result<bool> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM accounts WHERE name = ?1 AND parent_id IS ?2 AND is_active = true"
+        )
+        .bind(name)
+        .bind(parent_id)
+        .fetch_one(&self.db.pool)
+        .await?;
+        
+        Ok(count.0 > 0)
+    }
+    
+    pub async fn get_by_parent(&self, parent_id: Option<i64>) -> Result<Vec<Account>> {
+        let accounts = sqlx::query_as(
+            "SELECT id, name, account_type, parent_id, currency, description, is_active, created_at, updated_at 
+             FROM accounts WHERE parent_id IS ?1 AND is_active = true ORDER BY name"
+        )
+        .bind(parent_id)
+        .fetch_all(&self.db.pool)
+        .await?;
+        
+        Ok(accounts)
+    }
+    
+    pub async fn update(&self, account: &Account) -> Result<Account> {
+        sqlx::query(
+            "UPDATE accounts SET name = ?1, account_type = ?2, parent_id = ?3, currency = ?4, 
+             description = ?5, is_active = ?6, updated_at = ?7 WHERE id = ?8"
+        )
+        .bind(&account.name)
+        .bind(&account.account_type)
+        .bind(&account.parent_id)
+        .bind(account.currency.code())
+        .bind(&account.description)
+        .bind(account.is_active)
+        .bind(Utc::now())
+        .bind(account.id)
+        .execute(&self.db.pool)
+        .await?;
+        
+        self.get_by_id(account.id.unwrap()).await
+    }
+    
+    pub async fn soft_delete(&self, id: i64) -> Result<()> {
+        sqlx::query("UPDATE accounts SET is_active = false, updated_at = ?1 WHERE id = ?2")
+            .bind(Utc::now())
+            .bind(id)
+            .execute(&self.db.pool)
+            .await?;
+        
+        Ok(())
+    }
+    
+    pub async fn get_account_tree(&self, root_id: Option<i64>) -> Result<Vec<Account>> {
+        // Recursive CTE to get entire account hierarchy
+        let accounts = sqlx::query_as(
+            r#"
+            WITH RECURSIVE account_tree AS (
+                SELECT id, name, account_type, parent_id, currency, description, is_active, created_at, updated_at, 0 as level
+                FROM accounts 
+                WHERE parent_id IS ?1 AND is_active = true
+                
+                UNION ALL
+                
+                SELECT a.id, a.name, a.account_type, a.parent_id, a.currency, a.description, a.is_active, a.created_at, a.updated_at, at.level + 1
+                FROM accounts a
+                JOIN account_tree at ON a.parent_id = at.id
+                WHERE a.is_active = true AND at.level < 5
+            )
+            SELECT id, name, account_type, parent_id, currency, description, is_active, created_at, updated_at
+            FROM account_tree 
+            ORDER BY level, name
+            "#
+        )
+        .bind(root_id)
+        .fetch_all(&self.db.pool)
+        .await?;
+        
+        Ok(accounts)
+    }
+}
+```
+
+### Missing Error Types
+**Priority**: High  
+**Phase**: Phase 1 (MVP completion)
+
+```rust
+#[derive(Error, Debug)]
+pub enum WalletError {
+    // ... existing errors
+    #[error("Parent account with ID {0} not found")]
+    ParentAccountNotFound(i64),
+    
+    #[error("Invalid account name: {0}")]
+    InvalidAccountName(String),
+    
+    #[error("Duplicate account name '{name}' under parent {parent_id:?}")]
+    DuplicateAccountName { name: String, parent_id: Option<i64> },
+    
+    #[error("Account hierarchy too deep (max 5 levels)")]
+    HierarchyTooDeep,
+    
+    #[error("Cannot delete account with ID {0}: has child accounts")]
+    AccountHasChildren(i64),
+    
+    #[error("Cannot delete account with ID {0}: has transactions")]
+    AccountHasTransactions(i64),
+}
+```
+
+### Account Service Complete Implementation
+**Priority**: High  
+**Phase**: Phase 1 (MVP completion)
+
+```rust
+impl AccountService {
+    pub async fn update_account(&self, account: &Account) -> Result<Account> {
+        // Validate account exists
+        let existing = self.repository.get_by_id(account.id.unwrap()).await?;
+        
+        // Validate name uniqueness if name changed
+        if existing.name != account.name {
+            if self.repository.name_exists_under_parent(&account.name, account.parent_id).await? {
+                return Err(WalletError::DuplicateAccountName { 
+                    name: account.name.clone(), 
+                    parent_id: account.parent_id 
+                });
+            }
+        }
+        
+        // Validate parent change doesn't create cycles
+        if existing.parent_id != account.parent_id {
+            if let Some(new_parent_id) = account.parent_id {
+                self.validate_no_circular_reference(account.id.unwrap(), new_parent_id).await?;
+            }
+        }
+        
+        self.repository.update(account).await
+    }
+    
+    pub async fn deactivate_account(&self, id: i64) -> Result<()> {
+        // Check for child accounts
+        let children = self.repository.get_by_parent(Some(id)).await?;
+        if !children.is_empty() {
+            return Err(WalletError::AccountHasChildren(id));
+        }
+        
+        // TODO: Check for transactions when transaction system is implemented
+        
+        self.repository.soft_delete(id).await
+    }
+    
+    pub async fn get_children(&self, parent_id: i64) -> Result<Vec<Account>> {
+        self.repository.get_by_parent(Some(parent_id)).await
+    }
+    
+    pub async fn get_account_hierarchy(&self, root_id: Option<i64>) -> Result<Vec<Account>> {
+        self.repository.get_account_tree(root_id).await
+    }
+    
+    async fn validate_no_circular_reference(&self, account_id: i64, new_parent_id: i64) -> Result<()> {
+        let mut current_id = Some(new_parent_id);
+        
+        while let Some(id) = current_id {
+            if id == account_id {
+                return Err(WalletError::InvalidAccountName("Circular reference detected".to_string()));
+            }
+            
+            let account = self.repository.get_by_id(id).await?;
+            current_id = account.parent_id;
+        }
+        
+        Ok(())
+    }
+    
+    pub async fn calculate_balance(&self, account_id: i64) -> Result<Money> {
+        // This will be implemented when transaction system is ready
+        // Should include:
+        // 1. Sum all transaction entries for this account
+        // 2. Apply debit/credit rules based on account type
+        // 3. Include child account balances
+        todo!("Implement after transaction repository is complete")
+    }
+}
+```
+
+### Account Service Tests
+**Priority**: Medium  
+**Phase**: Phase 1 (MVP completion)
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[tokio::test]
+    async fn test_create_account_validates_parent_exists() {
+        // Test parent validation
+    }
+    
+    #[tokio::test]
+    async fn test_create_account_validates_name_uniqueness() {
+        // Test name uniqueness within parent
+    }
+    
+    #[tokio::test]
+    async fn test_create_account_validates_hierarchy_depth() {
+        // Test max 5 levels depth
+    }
+    
+    #[tokio::test]
+    async fn test_update_account_prevents_circular_reference() {
+        // Test circular reference prevention
+    }
+    
+    #[tokio::test]
+    async fn test_deactivate_account_with_children_fails() {
+        // Test cannot delete account with children
+    }
+}
+```
+
 ---
 
 *This document should be updated as new enhancement ideas emerge during development.*

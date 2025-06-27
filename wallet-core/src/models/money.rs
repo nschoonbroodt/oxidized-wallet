@@ -33,6 +33,14 @@ impl Currency {
         &self.symbol
     }
 
+    pub fn from_code(code: &str) -> Result<Self> {
+        match code.to_uppercase().as_str() {
+            "EUR" => Ok(Self::eur()),
+            "BTC" => Ok(Self::btc()),
+            _ => Err(CurrencyError::InvalidCurrencyCode(code.to_string()).into()),
+        }
+    }
+
     pub fn eur() -> Self {
         Self::new("EUR", 2, "€").unwrap()
     }

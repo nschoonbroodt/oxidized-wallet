@@ -279,12 +279,12 @@ impl Database {
 
 ---
 
-### Step 4: Implement Account Management Logic
+### Step 4: Implement Account Management Logic ✅
 **Estimated Time**: 2.5 hours  
 **Dependencies**: Step 3
 
 #### Tasks:
-1. **Create account repository**
+1. **Create account repository** ✅
 ```rust
 // wallet-core/src/db/accounts.rs
 use crate::models::{Account, AccountType};
@@ -339,7 +339,7 @@ impl AccountRepository {
 }
 ```
 
-2. **Create account service with business logic**
+2. **Create account service with business logic** ✅
 ```rust
 // wallet-core/src/services/account_service.rs
 use crate::db::AccountRepository;
