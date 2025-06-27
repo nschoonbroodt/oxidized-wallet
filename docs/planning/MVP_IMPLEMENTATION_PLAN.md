@@ -11,7 +11,7 @@ This document provides a detailed step-by-step plan for implementing the MVP (Ph
 
 ## Implementation Steps
 
-### Step 1: Set up Rust Workspace
+### Step 1: Set up Rust Workspace ✅
 **Estimated Time**: 30 minutes  
 **Dependencies**: None
 
@@ -35,12 +35,12 @@ chrono = { version = "0.4", features = ["serde"] }
 rust_decimal = { version = "1.34", features = ["serde"] }
 ```
 
-2. **Create wallet-core library**
+2. **Create wallet-core library** ✅
 ```bash
-cargo new --lib wallet-core
+cargo new --lib wallet-core --vcs none
 ```
 
-3. **Initialize basic project structure**
+3. **Initialize basic project structure** ✅
 ```
 wallet-core/src/
 ├── lib.rs
@@ -66,7 +66,7 @@ wallet-core/src/
 **Dependencies**: Step 1
 
 #### Tasks:
-1. **Create Money type with proper decimal handling**
+1. **Create Money type with proper decimal handling** ✅
 ```rust
 // wallet-core/src/models/money.rs
 use rust_decimal::Decimal;
@@ -104,7 +104,7 @@ impl Money {
 }
 ```
 
-2. **Create Account types**
+2. **Create Account types** ✅
 ```rust
 // wallet-core/src/models/account.rs
 use chrono::{DateTime, Utc};
@@ -133,7 +133,7 @@ pub struct Account {
 }
 ```
 
-3. **Create Transaction types**
+3. **Create Transaction types** ✅
 ```rust
 // wallet-core/src/models/transaction.rs
 use chrono::{DateTime, NaiveDate, Utc};
