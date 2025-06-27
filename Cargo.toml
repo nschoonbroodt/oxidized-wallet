@@ -1,0 +1,14 @@
+[workspace]
+members = []
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Nicolas Schoonbroodt"]
+edition = "2024"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1.37", features = ["serde"] }
