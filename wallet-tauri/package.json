@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "@vueuse/core": "^13.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.525.0",
@@ -23,6 +24,8 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@iconify-json/radix-icons": "^1.2.2",
+    "@iconify/vue": "^5.0.0",
     "@tauri-apps/cli": "^2",
     "@types/node": "^24.0.6",
     "@vitejs/plugin-vue": "^5.2.1",

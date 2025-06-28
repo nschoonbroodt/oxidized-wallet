@@ -1,12 +1,13 @@
 <script setup lang="ts">
-
-
+import ThemeSelector from '@/components/ui/ThemeSelector.vue'
 </script>
 
 <template>
-<div>hi</div>
+  <ThemeSelector />
+<div class="bg-background text-foreground">hi</div>
+
 </template>
 
-<style scoped>
+<style >
 
 </style>
