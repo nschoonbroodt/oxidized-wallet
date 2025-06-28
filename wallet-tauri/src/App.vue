@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import ThemeSelector from '@/components/ui/ThemeSelector.vue'
+import {SidebarProvider, SidebarTrigger} from './components/ui/sidebar';
+import AppSidebar from './components/AppSidebar.vue';
+
 </script>
 
 <template>
-  <ThemeSelector />
-<div class="bg-background text-foreground">hi</div>
+  <SidebarProvider>
+    <AppSidebar />
+    <main>
+      <SidebarTrigger />
+      <slot />
+    </main>
+  </SidebarProvider>
+
 
 </template>
 
