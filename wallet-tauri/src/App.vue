@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {SidebarProvider, SidebarTrigger} from './components/ui/sidebar';
-import AppSidebar from './components/AppSidebar.vue';
+import AppSidebar from './components/layout/AppSidebar.vue';
+import MainContent from './components/layout/MainContent.vue';
 
 </script>
 
@@ -9,7 +10,7 @@ import AppSidebar from './components/AppSidebar.vue';
     <AppSidebar />
     <main>
       <SidebarTrigger />
-      <slot />
+      <MainContent />
     </main>
   </SidebarProvider>
 

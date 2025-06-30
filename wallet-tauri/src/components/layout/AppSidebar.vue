@@ -9,9 +9,10 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem
+  SidebarMenuItem,
+  SidebarSeparator
 } from '@/components/ui/sidebar'
-import SidebarSeparator from './ui/sidebar/SidebarSeparator.vue';
+import { Button } from '@/components/ui/button'
 
   import { ref } from 'vue'
 
@@ -64,10 +65,7 @@ const items = [
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-        <div class="flex items-center gap-2 p-2">
-            <User class="h-4 w-4" />
-            <span class="text-sm">Nicolas</span>
-        </div>
+        <Button>Nouvelle transaction</Button>
     </SidebarFooter>
   </Sidebar>
 </template>
