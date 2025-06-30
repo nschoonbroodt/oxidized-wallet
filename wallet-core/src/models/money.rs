@@ -2,7 +2,7 @@ use crate::errors::{CurrencyError, Result};
 use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct Currency {
     code: String,
     minor_unit_scale: u8,

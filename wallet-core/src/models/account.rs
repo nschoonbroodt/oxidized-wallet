@@ -4,7 +4,7 @@ use sqlx::{FromRow, Row, Type};
 
 use crate::models::money::Currency;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, sqlx::Type, specta::Type)]
 #[sqlx(type_name = "text", rename_all = "lowercase")]
 pub enum AccountType {
     Asset,
@@ -14,7 +14,7 @@ pub enum AccountType {
     Expense,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct Account {
     pub id: Option<i64>,
     pub name: String,
