@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import {SidebarProvider, SidebarTrigger} from './components/ui/sidebar';
-import AppSidebar from './components/layout/AppSidebar.vue';
-import MainContent from './components/layout/MainContent.vue';
-
+import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
+import AppSidebar from "./components/layout/AppSidebar.vue";
+import MainContent from "./components/layout/MainContent.vue";
 </script>
 
 <template>
@@ -13,10 +12,6 @@ import MainContent from './components/layout/MainContent.vue';
       <MainContent />
     </main>
   </SidebarProvider>
-
-
 </template>
 
-<style >
-
-</style>
+<style></style>

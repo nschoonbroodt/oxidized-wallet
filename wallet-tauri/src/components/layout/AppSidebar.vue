@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BarChart3, Home, Wallet, ArrowLeftRight } from "lucide-vue-next"
+import { BarChart3, Home, Wallet, ArrowLeftRight } from "lucide-vue-next";
 import {
   Sidebar,
   SidebarContent,
@@ -10,13 +10,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator
-} from '@/components/ui/sidebar'
-import { Button } from '@/components/ui/button'
+  SidebarSeparator,
+} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
-  import { ref } from 'vue'
+import { ref } from "vue";
 
-  const activeItem = ref('Tableau de bord')
+const activeItem = ref("Tableau de bord");
 
 const items = [
   {
@@ -38,34 +38,36 @@ const items = [
     title: "Rapports",
     url: "#",
     icon: BarChart3,
-  }
+  },
 ];
 </script>
 
 <template>
   <Sidebar>
-    <SidebarHeader>
-        Oxidized Wallet
-    </SidebarHeader>
-    <SidebarSeparator/>
+    <SidebarHeader> Oxidized Wallet </SidebarHeader>
+    <SidebarSeparator />
     <SidebarContent>
-      <SidebarGroup >
+      <SidebarGroup>
         <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem v-for="item in items" :key="item.title">
-                <SidebarMenuButton asChild>
-                    <a :href="item.url"  @click="activeItem = item.title" :class="{ 'bg-accent': activeItem === item.title }">
-                      <component :is="item.icon" />
-                      <span>{{item.title}}</span>
-                    </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+          <SidebarMenu>
+            <SidebarMenuItem v-for="item in items" :key="item.title">
+              <SidebarMenuButton asChild>
+                <a
+                  :href="item.url"
+                  @click="activeItem = item.title"
+                  :class="{ 'bg-accent': activeItem === item.title }"
+                >
+                  <component :is="item.icon" />
+                  <span>{{ item.title }}</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-        <Button>Nouvelle transaction</Button>
+      <Button>Nouvelle transaction</Button>
     </SidebarFooter>
   </Sidebar>
 </template>
