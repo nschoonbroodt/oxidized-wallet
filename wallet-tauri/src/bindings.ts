@@ -5,7 +5,9 @@
 
 
 export const commands = {
-
+async greet(name: string) : Promise<string> {
+    return await TAURI_INVOKE("greet", { name });
+}
 }
 
 /** user-defined events **/
@@ -18,9 +20,7 @@ export const commands = {
 
 /** user-defined types **/
 
-export type Account = { id: bigint | null; name: string; account_type: AccountType; parent_id: bigint | null; currency: Currency; description: string | null; is_active: boolean; created_at: string; updated_at: string }
-export type AccountType = "Asset" | "Liability" | "Equity" | "Income" | "Expense"
-export type Currency = { code: string; minor_unit_scale: number; symbol: string }
+
 
 /** tauri-specta globals **/
 
