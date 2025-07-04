@@ -1,24 +1,32 @@
 use std::path::Path;
 
 use crate::errors::Result;
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+use sqlx::{
+    SqlitePool,
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+};
 
 pub struct Database {
     pub pool: SqlitePool,
 }
 
 impl Database {
-    pub async fn new(database_url: &str) -> Result<Self> {
+    pub async fn new(database_file: &str) -> Result<Self> {
         // Create the file if it does not exists
-        let db_path = database_url
+        let db_path = database_file
             .trim_start_matches("sqlite://")
             .trim_start_matches("sqlite:");
         if let Some(parent) = Path::new(db_path).parent() {
             tokio::fs::create_dir_all(parent).await.ok();
         }
+
+        let options = SqliteConnectOptions::new()
+            .filename(db_path)
+            .create_if_missing(true);
+
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(database_url)
+            .connect_with(options)
             .await?;
         Ok(Database { pool })
     }
