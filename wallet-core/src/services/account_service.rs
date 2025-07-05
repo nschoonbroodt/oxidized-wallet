@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use chrono::Utc;
 
+use crate::db::connection::Database;
 use crate::errors::{Result, WalletError};
 use crate::{Account, Currency, Money};
 use crate::{AccountType, db::accounts::AccountRepository};
@@ -9,8 +12,10 @@ pub struct AccountService {
 }
 
 impl AccountService {
-    pub fn new(repository: AccountRepository) -> Self {
-        Self { repository }
+    pub fn new(db: Arc<Database>) -> Self {
+        Self {
+            repository: AccountRepository::new(db),
+        }
     }
 
     pub async fn create_account(
@@ -45,6 +50,10 @@ impl AccountService {
         // Implementation to calculate balance from transaction entries
         // Including child account balances
         todo!()
+    }
+
+    pub async fn get_accounts(&self) -> Result<Vec<Account>> {
+        self.repository.get_all().await
     }
 
     pub async fn get_account(&self, id: i64) -> Result<Account> {

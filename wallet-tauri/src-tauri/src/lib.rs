@@ -1,3 +1,5 @@
+mod commands;
+
 use std::sync::Arc;
 
 #[cfg(debug_assertions)]
@@ -10,15 +12,10 @@ pub struct AppState {
     db: Arc<Database>,
 }
 
-#[tauri::command]
-#[specta::specta]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = Builder::<tauri::Wry>::new().commands(collect_commands![greet,]);
+    let mut builder =
+        Builder::<tauri::Wry>::new().commands(collect_commands![commands::get_accounts,]);
     #[cfg(debug_assertions)]
     {
         builder

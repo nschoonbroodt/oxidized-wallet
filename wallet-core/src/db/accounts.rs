@@ -32,6 +32,19 @@ impl AccountRepository {
         self.get_by_id(id).await
     }
 
+    pub async fn get_all(&self) -> Result<Vec<Account>> {
+        let accounts: Vec<Account> = sqlx::query_as(
+            r#"
+            SELECT id, name, account_type, parent_id, currency, description, is_active, created_at, updated_at
+            FROM accounts
+            ORDER BY created_at DESC
+            "#,
+        )
+        .fetch_all(&self.db.pool)
+        .await?;
+        Ok(accounts)
+    }
+
     pub async fn get_by_id(&self, id: i64) -> Result<Account> {
         let account: Account = sqlx::query_as(
             r#"
