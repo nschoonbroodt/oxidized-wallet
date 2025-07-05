@@ -13,10 +13,11 @@ defineEmits<{
 const loading = ref(false);
 const error = ref<string | null>(null);
 const formData = ref({
-  name: '',
   account_type: '' as AccountType | '',
   parent_id: null as bigint | null,
-  description: ''
+  name: '',
+  description: '',
+  currency: 'EUR'
 });
 
 // We'll need accounts for the parent dropdown - for now, empty array
@@ -31,8 +32,8 @@ const parentAccounts = computed(() => {
 
 // Submit handler - this will error and guide us to implement the command
 const handleSubmit = async () => {
-  if (!formData.value.name.trim() || !formData.value.account_type) {
-    error.value = 'Name and account type are required';
+  if (!formData.value.account_type || !formData.value.name.trim()) {
+    error.value = 'Account type and name are required';
     return;
   }
 
@@ -45,17 +46,19 @@ const handleSubmit = async () => {
       name: formData.value.name.trim(),
       account_type: formData.value.account_type,
       parent_id: formData.value.parent_id,
-      description: formData.value.description || null
+      description: formData.value.description || null,
+      currency: formData.value.currency
     });
 
     const newAccount = unwrapResult(result);
     
     // Reset form
     formData.value = {
-      name: '',
       account_type: '',
       parent_id: null,
-      description: ''
+      name: '',
+      description: '',
+      currency: 'EUR'
     };
 
     // Emit success
@@ -70,28 +73,16 @@ const handleSubmit = async () => {
 
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
-    <!-- Account Name -->
-    <div>
-      <label class="block text-sm font-medium mb-1">Account Name *</label>
-      <input
-        v-model="formData.name"
-        type="text"
-        required
-        class="w-full p-2 border rounded"
-        placeholder="e.g., Compte Courant"
-      />
-    </div>
-
-    <!-- Account Type -->
+    <!-- Account Type (First) -->
     <div>
       <label class="block text-sm font-medium mb-1">Account Type *</label>
       <select v-model="formData.account_type" required class="w-full p-2 border rounded">
         <option value="">Select type...</option>
-        <option value="Asset">Asset (Actif)</option>
-        <option value="Liability">Liability (Passif)</option>
-        <option value="Equity">Equity (Capitaux propres)</option>
-        <option value="Income">Income (Revenus)</option>
-        <option value="Expense">Expense (Dépenses)</option>
+        <option value="Asset">💰 Asset (Actif) - Bank accounts, cash, investments</option>
+        <option value="Liability">💳 Liability (Passif) - Loans, credit cards</option>
+        <option value="Equity">🏦 Equity (Capitaux propres) - Owner's equity</option>
+        <option value="Income">📈 Income (Revenus) - Salary, bonuses</option>
+        <option value="Expense">📉 Expense (Dépenses) - Food, transport, bills</option>
       </select>
     </div>
 
@@ -106,6 +97,18 @@ const handleSubmit = async () => {
       </select>
     </div>
 
+    <!-- Account Name -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Account Name *</label>
+      <input
+        v-model="formData.name"
+        type="text"
+        required
+        class="w-full p-2 border rounded"
+        placeholder="e.g., Compte Courant"
+      />
+    </div>
+
     <!-- Description -->
     <div>
       <label class="block text-sm font-medium mb-1">Description</label>
@@ -116,6 +119,9 @@ const handleSubmit = async () => {
         placeholder="Optional description..."
       />
     </div>
+
+    <!-- Currency (Hidden for now) -->
+    <input type="hidden" v-model="formData.currency" value="EUR" />
 
     <!-- Buttons -->
     <div class="flex space-x-2">
