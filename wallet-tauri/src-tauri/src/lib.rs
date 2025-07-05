@@ -14,8 +14,10 @@ pub struct AppState {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder =
-        Builder::<tauri::Wry>::new().commands(collect_commands![commands::get_accounts,]);
+    let mut builder = Builder::<tauri::Wry>::new().commands(collect_commands![
+        commands::get_accounts,
+        commands::create_account,
+    ]);
     #[cfg(debug_assertions)]
     {
         builder
