@@ -39,12 +39,10 @@ jobs:
         with:
           workspaces: './wallet-core -> target'
 
-      - name: Sync node version and setup cache
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-          cache: 'npm'
-          cache-dependency-path: wallet-tauri/package-lock.json
 
       - name: Install frontend dependencies
         run: npm install
