@@ -1,5 +1,5 @@
 use tauri::State;
-use wallet_core::{Account, AccountType, Currency};
+use wallet_core::{Account, AccountType, Currency, Transaction, TransactionService, TransactionFilters};
 use wallet_core::AccountNode;
 
 use crate::AppState;
@@ -58,5 +58,31 @@ pub async fn get_account_tree(state: State<'_, AppState>) -> Result<Vec<AccountN
     match account_service.get_account_tree().await {
         Ok(tree) => Ok(tree),
         Err(e) => Err(format!("Failed to get account tree: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_transactions(
+    state: State<'_, AppState>,
+    filters: TransactionFilters,
+) -> Result<Vec<Transaction>, String> {
+    let transaction_service = TransactionService::new(state.db.clone());
+    match transaction_service.get_transactions(filters).await {
+        Ok(transactions) => Ok(transactions),
+        Err(e) => Err(format!("Failed to get transactions: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_transaction(
+    state: State<'_, AppState>,
+    id: i64,
+) -> Result<Transaction, String> {
+    let transaction_service = TransactionService::new(state.db.clone());
+    match transaction_service.get_transaction(id).await {
+        Ok(transaction) => Ok(transaction),
+        Err(e) => Err(format!("Failed to get transaction: {}", e)),
     }
 }
