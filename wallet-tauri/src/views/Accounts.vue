@@ -89,7 +89,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="h-full p-6">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-bold">Accounts</h1>
       <button

@@ -7,14 +7,16 @@ import TopBar from "./components/layout/TopBar.vue";
 <template>
   <SidebarProvider>
     <AppSidebar />
-    <main>
+    <main class="flex-1 flex flex-col min-h-screen">
       <div class="flex items-center border-b p-4">
         <SidebarTrigger class="mr-4" />
         <div class="flex-1">
           <TopBar />
         </div>
       </div>
-      <RouterView />
+      <div class="flex-1">
+        <RouterView />
+      </div>
     </main>
   </SidebarProvider>
 </template>
