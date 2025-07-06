@@ -68,6 +68,46 @@ async getAccountBalanceWithChildren(accountId: bigint) : Promise<Result<Money, s
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getNetWorth() : Promise<Result<Money, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_net_worth") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getTotalAssets() : Promise<Result<Money, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_total_assets") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getCurrentMonthIncome() : Promise<Result<Money, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_current_month_income") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getCurrentMonthExpenses() : Promise<Result<Money, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_current_month_expenses") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRecentTransactions(limit: number | null) : Promise<Result<Transaction[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_recent_transactions", { limit }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

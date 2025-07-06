@@ -23,6 +23,11 @@ pub fn run() {
         commands::create_simple_transaction,
         commands::get_account_balance,
         commands::get_account_balance_with_children,
+        commands::get_net_worth,
+        commands::get_total_assets,
+        commands::get_current_month_income,
+        commands::get_current_month_expenses,
+        commands::get_recent_transactions,
     ]);
     #[cfg(debug_assertions)]
     {

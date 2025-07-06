@@ -1,7 +1,8 @@
 use tauri::State;
-use wallet_core::{Account, AccountType, Currency, Money, Transaction, TransactionService, TransactionFilters, AccountService};
+use wallet_core::{Account, AccountType, Currency, Money, Transaction, TransactionService, TransactionFilters, AccountService, ReportService};
 use wallet_core::AccountNode;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc, Datelike};
+use serde::{Serialize, Deserialize};
 
 use crate::AppState;
 
@@ -140,5 +141,62 @@ pub async fn get_account_balance_with_children(
     match account_service.calculate_balance_with_children(account_id).await {
         Ok(balance) => Ok(balance),
         Err(e) => Err(format!("Failed to calculate hierarchical balance: {}", e)),
+    }
+}
+
+// Dashboard metric commands
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_net_worth(state: State<'_, AppState>) -> Result<Money, String> {
+    let report_service = ReportService::new(state.db.clone());
+    match report_service.get_net_worth().await {
+        Ok(net_worth) => Ok(net_worth),
+        Err(e) => Err(format!("Failed to calculate net worth: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_total_assets(state: State<'_, AppState>) -> Result<Money, String> {
+    let report_service = ReportService::new(state.db.clone());
+    match report_service.get_total_assets().await {
+        Ok(total_assets) => Ok(total_assets),
+        Err(e) => Err(format!("Failed to calculate total assets: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_current_month_income(state: State<'_, AppState>) -> Result<Money, String> {
+    let report_service = ReportService::new(state.db.clone());
+    match report_service.get_current_month_income().await {
+        Ok(income) => Ok(income),
+        Err(e) => Err(format!("Failed to calculate monthly income: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_current_month_expenses(state: State<'_, AppState>) -> Result<Money, String> {
+    let report_service = ReportService::new(state.db.clone());
+    match report_service.get_current_month_expenses().await {
+        Ok(expenses) => Ok(expenses),
+        Err(e) => Err(format!("Failed to calculate monthly expenses: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_recent_transactions(
+    state: State<'_, AppState>,
+    limit: Option<u32>,
+) -> Result<Vec<Transaction>, String> {
+    let report_service = ReportService::new(state.db.clone());
+    let transaction_limit = limit.unwrap_or(10);
+    
+    match report_service.get_recent_transactions(transaction_limit).await {
+        Ok(transactions) => Ok(transactions),
+        Err(e) => Err(format!("Failed to get recent transactions: {}", e)),
     }
 }

@@ -22,6 +22,7 @@ defineProps<{
   icon: IconKey;
   trend?: string;
   trendDirection?: "up" | "down";
+  loading?: boolean;
 }>();
 </script>
 
@@ -36,7 +37,8 @@ defineProps<{
       </div>
     </CardHeader>
     <CardContent>
-      <p class="text-2xl font-bold text-gray-900">{{ value }}</p>
+      <p v-if="loading" class="text-2xl font-bold text-gray-400 animate-pulse">Loading...</p>
+      <p v-else class="text-2xl font-bold text-gray-900">{{ value }}</p>
     </CardContent>
     <CardFooter v-if="trend" class="pt-1">
       <p
