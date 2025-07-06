@@ -20,6 +20,9 @@ pub fn run() {
         commands::get_account_tree,
         commands::get_transactions,
         commands::get_transaction,
+        commands::create_simple_transaction,
+        commands::get_account_balance,
+        commands::get_account_balance_with_children,
     ]);
     #[cfg(debug_assertions)]
     {

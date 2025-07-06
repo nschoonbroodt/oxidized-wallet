@@ -44,6 +44,30 @@ async getTransaction(id: bigint) : Promise<Result<Transaction, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async createSimpleTransaction(description: string, date: string, amountCents: bigint, currencyCode: string, fromAccountId: bigint, toAccountId: bigint) : Promise<Result<Transaction, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_simple_transaction", { description, date, amountCents, currencyCode, fromAccountId, toAccountId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getAccountBalance(accountId: bigint) : Promise<Result<Money, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_account_balance", { accountId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getAccountBalanceWithChildren(accountId: bigint) : Promise<Result<Money, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_account_balance_with_children", { accountId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

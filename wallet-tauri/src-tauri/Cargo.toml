@@ -26,5 +26,6 @@ tauri-specta = { version = "2.0.0-rc.21", features = ["derive", "typescript"] }
 specta = { workspace = true }
 wallet-core = { path = "../../wallet-core" }
 tokio = { workspace = true }
+chrono = { workspace = true }
 
 specta-typescript = { version = "0.0.9" }

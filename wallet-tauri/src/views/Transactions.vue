@@ -94,6 +94,93 @@ const fetchTransactions = async () => {
   }
 };
 
+// Form data
+const formData = ref({
+  description: '',
+  date: new Date().toISOString().split('T')[0], // Today's date
+  amount: '',
+  fromAccountId: null as bigint | null,
+  toAccountId: null as bigint | null,
+});
+const formLoading = ref(false);
+const formError = ref<string | null>(null);
+
+// Account tree for hierarchical display
+const accountTree = ref<any[]>([]);
+
+const fetchAccountTree = async () => {
+  try {
+    const result = await commands.getAccountTree();
+    accountTree.value = unwrapResult(result);
+  } catch (e) {
+    console.error("Failed to fetch account tree:", e);
+  }
+};
+
+// Flatten account tree for form selection
+const flattenedAccounts = computed(() => {
+  const flatten = (nodes: any[], depth = 0): any[] => {
+    const result: any[] = [];
+    for (const node of nodes) {
+      result.push({
+        ...node.account,
+        depth,
+        displayName: '  '.repeat(depth) + node.account.name
+      });
+      if (node.children?.length > 0) {
+        result.push(...flatten(node.children, depth + 1));
+      }
+    }
+    return result;
+  };
+  return flatten(accountTree.value);
+});
+
+const createTransaction = async () => {
+  if (!formData.value.description || !formData.value.amount || 
+      !formData.value.fromAccountId || !formData.value.toAccountId) {
+    formError.value = "Tous les champs sont requis";
+    return;
+  }
+
+  if (formData.value.fromAccountId === formData.value.toAccountId) {
+    formError.value = "Les comptes source et destination doivent être différents";
+    return;
+  }
+
+  formLoading.value = true;
+  formError.value = null;
+
+  try {
+    const amountCents = Math.round(parseFloat(formData.value.amount) * 100);
+    const result = await commands.createSimpleTransaction(
+      formData.value.description,
+      formData.value.date,
+      amountCents,
+      "EUR", // Fixed currency for now
+      formData.value.fromAccountId,
+      formData.value.toAccountId,
+    );
+    
+    unwrapResult(result);
+    
+    // Reset form and close
+    formData.value = {
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      amount: '',
+      fromAccountId: null,
+      toAccountId: null,
+    };
+    onTransactionCreated();
+  } catch (e) {
+    formError.value = e instanceof Error ? e.message : String(e);
+    console.error("Failed to create transaction:", e);
+  } finally {
+    formLoading.value = false;
+  }
+};
+
 const onTransactionCreated = () => {
   showForm.value = false;
   fetchTransactions(); // Refresh list
@@ -101,6 +188,7 @@ const onTransactionCreated = () => {
 
 onMounted(() => {
   fetchTransactions();
+  fetchAccountTree();
 });
 </script>
 
@@ -150,9 +238,107 @@ onMounted(() => {
 
     <!-- New Transaction Form -->
     <div v-if="showForm" class="mb-6 p-4 border rounded bg-gray-50">
-      <h2 class="text-lg font-semibold mb-4">Nouvelle Transaction</h2>
-      <!-- TODO: Add TransactionForm component -->
-      <p class="text-gray-600">Formulaire de transaction à implémenter</p>
+      <h2 class="text-lg font-semibold mb-4">Nouvelle Transaction Simple</h2>
+      
+      <form @submit.prevent="createTransaction" class="space-y-4">
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Description</label>
+          <input 
+            v-model="formData.description"
+            type="text" 
+            placeholder="Ex: Salaire, Courses, etc."
+            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <!-- Date -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Date</label>
+          <input 
+            v-model="formData.date"
+            type="date" 
+            class="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <!-- Amount -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Montant (€)</label>
+          <input 
+            v-model="formData.amount"
+            type="number" 
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            class="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+            required
+          />
+        </div>
+
+        <!-- From Account -->
+        <div>
+          <label class="block text-sm font-medium mb-1">De (compte source)</label>
+          <select 
+            v-model="formData.fromAccountId"
+            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option :value="null">Choisir un compte</option>
+            <option 
+              v-for="account in flattenedAccounts" 
+              :key="account.id?.toString()"
+              :value="account.id"
+            >
+              {{ account.displayName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- To Account -->
+        <div>
+          <label class="block text-sm font-medium mb-1">Vers (compte destination)</label>
+          <select 
+            v-model="formData.toAccountId"
+            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+            required
+          >
+            <option :value="null">Choisir un compte</option>
+            <option 
+              v-for="account in flattenedAccounts" 
+              :key="account.id?.toString()"
+              :value="account.id"
+            >
+              {{ account.displayName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Error Display -->
+        <div v-if="formError" class="text-red-600 text-sm">
+          {{ formError }}
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex gap-3 pt-2">
+          <Button 
+            type="submit"
+            :disabled="formLoading"
+            class="bg-green-500 hover:bg-green-600"
+          >
+            {{ formLoading ? "Création..." : "Créer Transaction" }}
+          </Button>
+          <Button 
+            type="button"
+            @click="showForm = false"
+            variant="outline"
+          >
+            Annuler
+          </Button>
+        </div>
+      </form>
     </div>
 
     <!-- Transaction List -->

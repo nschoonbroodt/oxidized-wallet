@@ -102,6 +102,66 @@ const mockCommands = {
     
     return { status: "ok", data: transaction };
   },
+  async createSimpleTransaction(
+    description: string,
+    date: string,
+    amountCents: bigint,
+    currencyCode: string,
+    fromAccountId: bigint,
+    toAccountId: bigint
+  ): Promise<Result<Transaction, string>> {
+    await delay(600); // Simulate database write delay
+    
+    // Validate accounts exist
+    const fromAccount = mockAccounts.find(acc => acc.id === fromAccountId);
+    const toAccount = mockAccounts.find(acc => acc.id === toAccountId);
+    
+    if (!fromAccount || !toAccount) {
+      return { status: "error", error: "Compte source ou destination introuvable" };
+    }
+    
+    // Create new transaction with mock data
+    const newTransaction: Transaction = {
+      id: BigInt(Date.now()), // Use timestamp as ID
+      description,
+      reference: null,
+      transaction_date: date,
+      created_at: new Date().toISOString(),
+      tags: null,
+      notes: null,
+      entries: [
+        {
+          id: BigInt(Date.now() + 1),
+          transaction_id: BigInt(Date.now()),
+          account_id: fromAccountId,
+          amount: {
+            amount_minor: Number(amountCents),
+            currency: EUR,
+          },
+          entry_type: "Credit", // Money comes FROM this account
+          description: null,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: BigInt(Date.now() + 2),
+          transaction_id: BigInt(Date.now()),
+          account_id: toAccountId,
+          amount: {
+            amount_minor: Number(amountCents),
+            currency: EUR,
+          },
+          entry_type: "Debit", // Money goes TO this account
+          description: null,
+          created_at: new Date().toISOString(),
+        },
+      ],
+    };
+    
+    // Add to mock transactions array (at beginning for recent display)
+    mockTransactions.unshift(newTransaction);
+    
+    return { status: "ok", data: newTransaction };
+  },
 };
 
 // Export either real or mock commands based on environment

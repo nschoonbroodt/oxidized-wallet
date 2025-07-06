@@ -1,6 +1,7 @@
 use tauri::State;
-use wallet_core::{Account, AccountType, Currency, Transaction, TransactionService, TransactionFilters};
+use wallet_core::{Account, AccountType, Currency, Money, Transaction, TransactionService, TransactionFilters, AccountService};
 use wallet_core::AccountNode;
+use chrono::NaiveDate;
 
 use crate::AppState;
 
@@ -84,5 +85,60 @@ pub async fn get_transaction(
     match transaction_service.get_transaction(id).await {
         Ok(transaction) => Ok(transaction),
         Err(e) => Err(format!("Failed to get transaction: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn create_simple_transaction(
+    state: State<'_, AppState>,
+    description: String,
+    date: NaiveDate,
+    amount_cents: i64,
+    currency_code: String,
+    from_account_id: i64,
+    to_account_id: i64,
+) -> Result<Transaction, String> {
+    // Create Money object
+    let currency = Currency::new(&currency_code, 2, "€")
+        .map_err(|e| format!("Invalid currency: {}", e))?;
+    let amount = Money::from_minor_units(amount_cents, currency);
+    
+    let transaction_service = TransactionService::new(state.db.clone());
+    match transaction_service.create_simple_transaction(
+        description,
+        date,
+        amount,
+        from_account_id,
+        to_account_id,
+    ).await {
+        Ok(transaction) => Ok(transaction),
+        Err(e) => Err(format!("Failed to create transaction: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_account_balance(
+    state: State<'_, AppState>,
+    account_id: i64,
+) -> Result<Money, String> {
+    let account_service = AccountService::new(state.db.clone());
+    match account_service.calculate_balance(account_id).await {
+        Ok(balance) => Ok(balance),
+        Err(e) => Err(format!("Failed to calculate balance: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_account_balance_with_children(
+    state: State<'_, AppState>,
+    account_id: i64,
+) -> Result<Money, String> {
+    let account_service = AccountService::new(state.db.clone());
+    match account_service.calculate_balance_with_children(account_id).await {
+        Ok(balance) => Ok(balance),
+        Err(e) => Err(format!("Failed to calculate hierarchical balance: {}", e)),
     }
 }
