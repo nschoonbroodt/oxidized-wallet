@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
 import AppSidebar from "./components/layout/AppSidebar.vue";
-import { useRoute } from "vue-router";
-import { computed } from "vue";
-
-const route = useRoute();
-const pageTitle = computed(() => route.meta?.title || "Oxidized Wallet");
+import TopBar from "./components/layout/TopBar.vue";
 </script>
 
 <template>
   <SidebarProvider>
     <AppSidebar />
     <main>
-      <header class="border-b p-4">
-        <SidebarTrigger />
-        <h1 class="text-xl font-semibold">{{ pageTitle }}</h1>
-      </header>
+      <div class="flex items-center border-b p-4">
+        <SidebarTrigger class="mr-4" />
+        <div class="flex-1">
+          <TopBar />
+        </div>
+      </div>
       <RouterView />
     </main>
   </SidebarProvider>
