@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use chrono::{NaiveDate, Datelike, Utc, Local};
+use chrono::{NaiveDate, Datelike, Local};
 
 use crate::db::connection::Database;
 use crate::errors::Result;
@@ -41,16 +41,12 @@ impl ReportService {
 
     /// Get current month income
     pub async fn get_monthly_income(&self, year: i32, month: u32) -> Result<Money> {
-        // For MVP, return total income (no date filtering yet)
-        // TODO: Implement proper date filtering in transaction repository
-        self.get_total_by_account_type(AccountType::Income).await
+        self.get_monthly_total_by_account_type(AccountType::Income, year, month).await
     }
 
     /// Get current month expenses  
     pub async fn get_monthly_expenses(&self, year: i32, month: u32) -> Result<Money> {
-        // For MVP, return total expenses (no date filtering yet)
-        // TODO: Implement proper date filtering in transaction repository
-        self.get_total_by_account_type(AccountType::Expense).await
+        self.get_monthly_total_by_account_type(AccountType::Expense, year, month).await
     }
 
     /// Get current month income (convenience method using current date)
@@ -82,6 +78,50 @@ impl ReportService {
                     Err(e) => {
                         // Log error but continue with other accounts
                         eprintln!("Failed to calculate balance for account {}: {}", account_id, e);
+                    }
+                }
+            }
+        }
+        
+        Ok(Money::from_minor_units(total, currency))
+    }
+
+    /// Helper method to calculate monthly total balance by account type with date filtering
+    async fn get_monthly_total_by_account_type(&self, account_type: AccountType, year: i32, month: u32) -> Result<Money> {
+        // Calculate start and end dates for the month
+        let start_date = NaiveDate::from_ymd_opt(year, month, 1)
+            .ok_or_else(|| crate::errors::WalletError::ValidationError("Invalid date".to_string()))?;
+        
+        let end_date = if month == 12 {
+            NaiveDate::from_ymd_opt(year + 1, 1, 1)
+        } else {
+            NaiveDate::from_ymd_opt(year, month + 1, 1)
+        }
+        .ok_or_else(|| crate::errors::WalletError::ValidationError("Invalid date".to_string()))?
+        .pred_opt()
+        .ok_or_else(|| crate::errors::WalletError::ValidationError("Invalid date".to_string()))?;
+        
+        // Get all accounts of the specified type
+        let accounts = self.account_service.get_accounts().await?;
+        let currency = Currency::new("EUR", 2, "€")?;
+        let mut total = 0i64;
+        
+        // Sum balances for accounts of the specified type within date range
+        for account in accounts.iter().filter(|a| a.parent_id.is_none() && a.account_type == account_type) {
+            if let Some(account_id) = account.id {
+                // Use the date-filtered balance calculation
+                match self.account_service.calculate_account_balance(account_id, Some(end_date)).await {
+                    Ok(balance) => {
+                        // Subtract balance at start of month to get just this month's activity
+                        let start_balance = match self.account_service.calculate_account_balance(account_id, Some(start_date.pred_opt().unwrap_or(start_date))).await {
+                            Ok(start_bal) => start_bal.amount_minor(),
+                            Err(_) => 0, // No transactions before start date
+                        };
+                        
+                        total += balance.amount_minor() - start_balance;
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to calculate monthly balance for account {}: {}", account_id, e);
                     }
                 }
             }
@@ -131,7 +171,5 @@ impl ReportService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    
     // TODO: Add tests once we have proper test fixtures
 }

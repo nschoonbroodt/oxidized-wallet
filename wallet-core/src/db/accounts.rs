@@ -195,6 +195,85 @@ impl AccountRepository {
             None => Ok(None),
         }
     }
+
+    pub async fn get_children(&self, parent_id: i64) -> Result<Vec<Account>> {
+        let accounts: Vec<Account> = sqlx::query_as(
+            r#"
+            SELECT id, name, account_type, parent_id, currency, description, is_active, created_at, updated_at
+            FROM accounts
+            WHERE parent_id = ?1 AND is_active = TRUE
+            ORDER BY name
+            "#,
+        )
+        .bind(parent_id)
+        .fetch_all(&self.db.pool)
+        .await?;
+        Ok(accounts)
+    }
+
+    pub async fn deactivate(&self, id: i64) -> Result<()> {
+        sqlx::query(
+            r#"
+            UPDATE accounts 
+            SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?1
+            "#,
+        )
+        .bind(id)
+        .execute(&self.db.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn update(&self, account: &Account) -> Result<Account> {
+        let id = account.id.ok_or_else(|| {
+            crate::errors::WalletError::ValidationError("Account ID is required for update".to_string())
+        })?;
+        
+        sqlx::query(
+            r#"
+            UPDATE accounts 
+            SET name = ?2, description = ?3, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?1
+            "#,
+        )
+        .bind(id)
+        .bind(&account.name)
+        .bind(&account.description)
+        .execute(&self.db.pool)
+        .await?;
+        
+        self.get_by_id(id).await
+    }
+
+    pub async fn get_account_transaction_sums_before_date(&self, account_id: i64, before_date: chrono::NaiveDate) -> Result<Option<(i64, i64, String)>> {
+        let row = sqlx::query(
+            r#"
+            SELECT 
+                COALESCE(SUM(CASE WHEN entry_type = 'debit' THEN amount_minor ELSE 0 END), 0) as total_debits,
+                COALESCE(SUM(CASE WHEN entry_type = 'credit' THEN amount_minor ELSE 0 END), 0) as total_credits,
+                currency
+            FROM transaction_entries te
+            JOIN transactions t ON te.transaction_id = t.id
+            WHERE te.account_id = ?1 AND t.transaction_date < ?2
+            GROUP BY currency
+            "#,
+        )
+        .bind(account_id)
+        .bind(before_date)
+        .fetch_optional(&self.db.pool)
+        .await?;
+        
+        match row {
+            Some(row) => {
+                let total_debits: i64 = row.get("total_debits");
+                let total_credits: i64 = row.get("total_credits");
+                let currency: String = row.get("currency");
+                Ok(Some((total_debits, total_credits, currency)))
+            },
+            None => Ok(None),
+        }
+    }
 }
 
 #[cfg(test)]

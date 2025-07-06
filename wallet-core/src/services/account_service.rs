@@ -135,16 +135,74 @@ impl AccountService {
         Ok(Money::from_minor_units(balance_minor, currency))
     }
 
-    pub async fn calculate_account_balance(&self, _account_id: i64, _as_of_date: Option<NaiveDate>) -> Result<Money> {
-        todo!("Account balance calculation with date not yet implemented")
+    pub async fn calculate_account_balance(&self, account_id: i64, as_of_date: Option<NaiveDate>) -> Result<Money> {
+        use crate::{Money, Currency};
+        
+        // Get the account to determine its type
+        let account = self.repository.get_by_id(account_id).await?;
+        
+        // Get raw transaction sums from repository (with or without date filter)
+        let transaction_sums = match as_of_date {
+            Some(date) => self.repository.get_account_transaction_sums_before_date(account_id, date).await?,
+            None => self.repository.get_account_transaction_sums(account_id).await?,
+        };
+        
+        // If no transactions, return zero balance with default currency
+        let (debit_sum, credit_sum, currency_code) = match transaction_sums {
+            Some((debits, credits, currency)) => (debits, credits, currency),
+            None => {
+                // Default to EUR for zero balance
+                let currency = Currency::new("EUR", 2, "€")?;
+                return Ok(Money::from_minor_units(0, currency));
+            }
+        };
+        
+        // Calculate balance based on account type (normal balance) - same logic as calculate_balance
+        let balance_minor = match account.account_type {
+            // Assets & Expenses: Debit increases balance (Debit - Credit)
+            crate::AccountType::Asset | crate::AccountType::Expense => debit_sum - credit_sum,
+            // Liabilities, Equity & Income: Credit increases balance (Credit - Debit)  
+            crate::AccountType::Liability | crate::AccountType::Equity | crate::AccountType::Income => credit_sum - debit_sum,
+        };
+        
+        // Reconstruct Money object
+        let currency = Currency::new(&currency_code, 2, "€")?;
+        Ok(Money::from_minor_units(balance_minor, currency))
     }
 
-    pub async fn get_account_balances(&self, _account_ids: &[i64]) -> Result<Vec<(i64, Money)>> {
-        todo!("Multiple account balances not yet implemented")
+    pub async fn get_account_balances(&self, account_ids: &[i64]) -> Result<Vec<(i64, Money)>> {
+        let mut balances = Vec::new();
+        
+        for &account_id in account_ids {
+            match self.calculate_balance(account_id).await {
+                Ok(balance) => balances.push((account_id, balance)),
+                Err(e) => {
+                    eprintln!("Failed to calculate balance for account {}: {}", account_id, e);
+                }
+            }
+        }
+        
+        Ok(balances)
     }
 
-    pub async fn validate_accounts(&self, _account_ids: &[i64]) -> Result<()> {
-        todo!("Account validation not yet implemented")
+    pub async fn validate_accounts(&self, account_ids: &[i64]) -> Result<()> {
+        for &account_id in account_ids {
+            match self.repository.get_by_id(account_id).await {
+                Ok(account) => {
+                    if !account.is_active {
+                        return Err(WalletError::ValidationError(
+                            format!("Account {} is inactive", account_id)
+                        ));
+                    }
+                }
+                Err(_) => {
+                    return Err(WalletError::ValidationError(
+                        format!("Account {} does not exist", account_id)
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     pub async fn get_accounts(&self) -> Result<Vec<Account>> {
@@ -159,16 +217,80 @@ impl AccountService {
         self.repository.get_by_id(id).await
     }
 
-    pub async fn update_account(&self, _account: &Account) -> Result<Account> {
-        todo!("Account update not yet implemented")
+    pub async fn update_account(&self, account: &Account) -> Result<Account> {
+        // Validate that the account exists and get the current version
+        let _current_account = self.repository.get_by_id(account.id.unwrap_or(0)).await?;
+        
+        // Validate business rules
+        if let Some(parent_id) = account.parent_id {
+            // Check that parent exists and has same account type
+            let parent = self.repository.get_by_id(parent_id).await?;
+            if parent.account_type != account.account_type {
+                return Err(WalletError::ValidationError(
+                    format!("Account type {:?} must be under a parent of the same type", account.account_type)
+                ));
+            }
+            
+            // Check hierarchy depth
+            self.validate_hierarchy_depth(parent_id).await?;
+        }
+        
+        // Prevent circular references
+        if let Some(account_id) = account.id {
+            if let Some(parent_id) = account.parent_id {
+                if account_id == parent_id {
+                    return Err(WalletError::ValidationError(
+                        "Account cannot be its own parent".to_string()
+                    ));
+                }
+            }
+        }
+        
+        self.repository.update(account).await
     }
 
-    pub async fn deactivate_account(&self, _id: i64) -> Result<()> {
-        todo!("Account deactivation not yet implemented")
+    pub async fn deactivate_account(&self, id: i64) -> Result<()> {
+        // First check if account exists
+        let _account = self.repository.get_by_id(id).await?;
+        
+        // Check if account has children - don't allow deactivation if it does
+        let children = self.get_children(id).await?;
+        if !children.is_empty() {
+            return Err(WalletError::ValidationError(
+                format!("Cannot deactivate account {} - it has {} child accounts", id, children.len())
+            ));
+        }
+        
+        // Deactivate the account
+        self.repository.deactivate(id).await
     }
 
-    pub async fn get_children(&self, _parent_id: i64) -> Result<Vec<Account>> {
-        todo!("Get children accounts not yet implemented")
+    pub async fn get_children(&self, parent_id: i64) -> Result<Vec<Account>> {
+        self.repository.get_children(parent_id).await
+    }
+
+    async fn validate_hierarchy_depth(&self, parent_id: i64) -> Result<()> {
+        let mut current_id = parent_id;
+        let mut depth = 0;
+        
+        // Walk up the hierarchy to count depth
+        loop {
+            let account = self.repository.get_by_id(current_id).await?;
+            depth += 1;
+            
+            if depth > 5 {
+                return Err(WalletError::ValidationError(
+                    "Account hierarchy too deep (max 5 levels)".to_string()
+                ));
+            }
+            
+            match account.parent_id {
+                Some(next_parent_id) => current_id = next_parent_id,
+                None => break,
+            }
+        }
+        
+        Ok(())
     }
 }
 
@@ -409,5 +531,83 @@ mod tests {
         // Child hierarchical balance should equal its own balance
         let child_hierarchical = account_service.calculate_balance_with_children(child_id).await.unwrap();
         assert_eq!(child_hierarchical.amount_minor(), 50000); // Same as direct balance
+    }
+
+    #[sqlx::test]
+    async fn test_get_children(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
+        let account_service = AccountService::new(db);
+        
+        // Create parent and child accounts
+        let parent_account = create_test_account(&account_service, "Bank Accounts", AccountType::Asset, None).await;
+        let parent_id = parent_account.id.unwrap();
+        
+        let _child1 = create_test_account(&account_service, "Checking", AccountType::Asset, Some(parent_id)).await;
+        let _child2 = create_test_account(&account_service, "Savings", AccountType::Asset, Some(parent_id)).await;
+        
+        // Test getting children
+        let children = account_service.get_children(parent_id).await.unwrap();
+        assert_eq!(children.len(), 2);
+        
+        let child_names: Vec<&String> = children.iter().map(|a| &a.name).collect();
+        assert!(child_names.contains(&&"Checking".to_string()));
+        assert!(child_names.contains(&&"Savings".to_string()));
+    }
+
+    #[sqlx::test]
+    async fn test_get_account_balances(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
+        let account_service = AccountService::new(db);
+        
+        // Create test accounts
+        let account1 = create_test_account(&account_service, "Account 1", AccountType::Asset, None).await;
+        let account2 = create_test_account(&account_service, "Account 2", AccountType::Asset, None).await;
+        
+        let account_ids = vec![account1.id.unwrap(), account2.id.unwrap()];
+        
+        // Get multiple balances
+        let balances = account_service.get_account_balances(&account_ids).await.unwrap();
+        assert_eq!(balances.len(), 2);
+        
+        // All should have zero balance (no transactions)
+        for (_, balance) in balances {
+            assert_eq!(balance.amount_minor(), 0);
+        }
+    }
+
+    #[sqlx::test]
+    async fn test_validate_accounts(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
+        let account_service = AccountService::new(db);
+        
+        // Create test account
+        let account = create_test_account(&account_service, "Test Account", AccountType::Asset, None).await;
+        let account_id = account.id.unwrap();
+        
+        // Test validation with existing account
+        let result = account_service.validate_accounts(&[account_id]).await;
+        assert!(result.is_ok());
+        
+        // Test validation with non-existing account
+        let result = account_service.validate_accounts(&[999999]).await;
+        assert!(result.is_err());
+    }
+
+    #[sqlx::test]
+    async fn test_deactivate_account(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
+        let account_service = AccountService::new(db);
+        
+        // Create test account
+        let account = create_test_account(&account_service, "Test Account", AccountType::Asset, None).await;
+        let account_id = account.id.unwrap();
+        
+        // Deactivate account
+        let result = account_service.deactivate_account(account_id).await;
+        assert!(result.is_ok());
+        
+        // Verify account is deactivated
+        let updated_account = account_service.get_account(account_id).await.unwrap();
+        assert!(!updated_account.is_active);
     }
 }
