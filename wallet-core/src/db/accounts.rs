@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use sqlx::Row;
+use std::sync::Arc;
 
+use crate::AccountNode;
 use crate::errors::Result;
 use crate::{Account, db::connection::Database};
-use crate::AccountNode;
 
 pub struct AccountRepository {
     db: Arc<Database>,
@@ -23,10 +23,10 @@ impl AccountRepository {
         )
         .bind(&account.name)
         .bind(&account.account_type)
-        .bind(&account.parent_id)
-        .bind(&account.currency.code())
+        .bind(account.parent_id)
+        .bind(account.currency.code())
         .bind(&account.description)
-        .bind(&account.is_active)
+        .bind(account.is_active)
         .execute(&self.db.pool)
         .await?
         .last_insert_rowid();
@@ -105,7 +105,10 @@ impl AccountRepository {
     }
 
     /// Get raw debit/credit sums for an account from transaction entries
-    pub async fn get_account_transaction_sums(&self, account_id: i64) -> Result<Option<(i64, i64, String)>> {
+    pub async fn get_account_transaction_sums(
+        &self,
+        account_id: i64,
+    ) -> Result<Option<(i64, i64, String)>> {
         let row = sqlx::query(
             r#"
             SELECT 
@@ -120,14 +123,14 @@ impl AccountRepository {
         .bind(account_id)
         .fetch_optional(&self.db.pool)
         .await?;
-        
+
         match row {
             Some(row) => {
                 let total_debits: i64 = row.get("total_debits");
                 let total_credits: i64 = row.get("total_credits");
                 let currency: String = row.get("currency");
                 Ok(Some((total_debits, total_credits, currency)))
-            },
+            }
             None => Ok(None),
         }
     }
@@ -158,7 +161,10 @@ impl AccountRepository {
     }
 
     /// Get raw debit/credit sums for multiple accounts (for hierarchical balance)
-    pub async fn get_multiple_accounts_transaction_sums(&self, account_ids: &[i64]) -> Result<Option<(i64, i64, String)>> {
+    pub async fn get_multiple_accounts_transaction_sums(
+        &self,
+        account_ids: &[i64],
+    ) -> Result<Option<(i64, i64, String)>> {
         if account_ids.is_empty() {
             return Ok(None);
         }
@@ -184,14 +190,14 @@ impl AccountRepository {
         }
 
         let row = query_builder.fetch_optional(&self.db.pool).await?;
-        
+
         match row {
             Some(row) => {
                 let total_debits: i64 = row.get("total_debits");
                 let total_credits: i64 = row.get("total_credits");
                 let currency: String = row.get("currency");
                 Ok(Some((total_debits, total_credits, currency)))
-            },
+            }
             None => Ok(None),
         }
     }
@@ -227,9 +233,11 @@ impl AccountRepository {
 
     pub async fn update(&self, account: &Account) -> Result<Account> {
         let id = account.id.ok_or_else(|| {
-            crate::errors::WalletError::ValidationError("Account ID is required for update".to_string())
+            crate::errors::WalletError::ValidationError(
+                "Account ID is required for update".to_string(),
+            )
         })?;
-        
+
         sqlx::query(
             r#"
             UPDATE accounts 
@@ -242,11 +250,15 @@ impl AccountRepository {
         .bind(&account.description)
         .execute(&self.db.pool)
         .await?;
-        
+
         self.get_by_id(id).await
     }
 
-    pub async fn get_account_transaction_sums_before_date(&self, account_id: i64, before_date: chrono::NaiveDate) -> Result<Option<(i64, i64, String)>> {
+    pub async fn get_account_transaction_sums_before_date(
+        &self,
+        account_id: i64,
+        before_date: chrono::NaiveDate,
+    ) -> Result<Option<(i64, i64, String)>> {
         let row = sqlx::query(
             r#"
             SELECT 
@@ -263,14 +275,14 @@ impl AccountRepository {
         .bind(before_date)
         .fetch_optional(&self.db.pool)
         .await?;
-        
+
         match row {
             Some(row) => {
                 let total_debits: i64 = row.get("total_debits");
                 let total_credits: i64 = row.get("total_credits");
                 let currency: String = row.get("currency");
                 Ok(Some((total_debits, total_credits, currency)))
-            },
+            }
             None => Ok(None),
         }
     }
@@ -282,7 +294,6 @@ mod tests {
     use crate::models::{account::AccountType, money::Currency};
     use chrono::Utc;
     use std::sync::Arc;
-
 
     fn create_test_account() -> Account {
         Account {

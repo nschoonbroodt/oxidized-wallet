@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use chrono::NaiveDate;
+use std::sync::Arc;
 
 use crate::db::connection::Database;
 use crate::db::transactions::TransactionRepository;
 use crate::errors::Result;
-use crate::{Transaction, Money};
+use crate::{Money, Transaction};
 
 #[derive(Debug, Clone)]
 pub struct TransactionEntryInput {
@@ -43,8 +43,10 @@ impl TransactionService {
     ) -> Result<Transaction> {
         // Validate transaction balance before creating
         Self::validate_transaction_balance(&entries)?;
-        
-        self.repository.create_transaction(description, transaction_date, entries).await
+
+        self.repository
+            .create_transaction(description, transaction_date, entries)
+            .await
     }
 
     pub async fn get_transaction(&self, id: i64) -> Result<Transaction> {
@@ -52,59 +54,66 @@ impl TransactionService {
     }
 
     pub async fn get_transactions(&self, filters: TransactionFilters) -> Result<Vec<Transaction>> {
-        self.repository.get_transactions(
-            filters.account_id,
-            filters.from_date,
-            filters.to_date,
-            filters.limit,
-            filters.offset,
-        ).await
+        self.repository
+            .get_transactions(
+                filters.account_id,
+                filters.from_date,
+                filters.to_date,
+                filters.limit,
+                filters.offset,
+            )
+            .await
     }
 
     // Transaction validation
     pub fn validate_transaction_balance(entries: &[TransactionEntryInput]) -> Result<()> {
         use crate::errors::WalletError;
-        
+
         // Must have at least 2 entries
         if entries.len() < 2 {
             return Err(WalletError::ValidationError(
-                "Transaction must have at least 2 entries".to_string()
-            ).into());
+                "Transaction must have at least 2 entries".to_string(),
+            ));
         }
-        
+
         // Validate positive amounts
         if entries.iter().any(|e| e.amount.amount_minor() <= 0) {
             return Err(WalletError::ValidationError(
-                "All transaction amounts must be positive".to_string()
-            ).into());
+                "All transaction amounts must be positive".to_string(),
+            ));
         }
-        
+
         // Validate all currencies are the same (MVP limitation)
         let first_currency = &entries[0].amount.currency().code();
-        if entries.iter().any(|e| e.amount.currency().code() != *first_currency) {
+        if entries
+            .iter()
+            .any(|e| e.amount.currency().code() != *first_currency)
+        {
             return Err(WalletError::ValidationError(
-                "Multi-currency transactions not supported yet".to_string()
-            ).into());
+                "Multi-currency transactions not supported yet".to_string(),
+            ));
         }
-        
+
         // Calculate total debits and credits
-        let total_debits: i64 = entries.iter()
+        let total_debits: i64 = entries
+            .iter()
             .filter(|e| matches!(e.entry_type, crate::EntryType::Debit))
             .map(|e| e.amount.amount_minor())
             .sum();
-        
-        let total_credits: i64 = entries.iter()
+
+        let total_credits: i64 = entries
+            .iter()
             .filter(|e| matches!(e.entry_type, crate::EntryType::Credit))
             .map(|e| e.amount.amount_minor())
             .sum();
-        
+
         if total_debits != total_credits {
-            return Err(WalletError::ValidationError(
-                format!("Transaction is not balanced: debits={}, credits={}", 
-                       total_debits, total_credits)
-            ).into());
+            return Err(WalletError::ValidationError(format!(
+                "Transaction is not balanced: debits={}, credits={}",
+                total_debits, total_credits
+            )));
         }
-        
+
         Ok(())
     }
 
@@ -114,20 +123,20 @@ impl TransactionService {
         description: String,
         date: NaiveDate,
         amount: Money,
-        from_account_id: i64,  // Account money comes from (credited)
-        to_account_id: i64,    // Account money goes to (debited)
+        from_account_id: i64, // Account money comes from (credited)
+        to_account_id: i64,   // Account money goes to (debited)
     ) -> Result<Transaction> {
         let entries = vec![
             TransactionEntryInput {
                 account_id: from_account_id,
                 amount: amount.clone(),
-                entry_type: crate::EntryType::Credit,  // Money leaves the FROM account
+                entry_type: crate::EntryType::Credit, // Money leaves the FROM account
                 description: None,
             },
             TransactionEntryInput {
                 account_id: to_account_id,
                 amount,
-                entry_type: crate::EntryType::Debit,   // Money enters the TO account
+                entry_type: crate::EntryType::Debit, // Money enters the TO account
                 description: None,
             },
         ];
@@ -139,13 +148,13 @@ impl TransactionService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Money, Currency, EntryType};
+    use crate::{Currency, EntryType, Money};
 
     #[test]
     fn test_validate_transaction_balance_success() {
         let currency = Currency::new("EUR", 2, "€").unwrap();
         let amount = Money::from_minor_units(1000, currency.clone()); // €10.00
-        
+
         let entries = vec![
             TransactionEntryInput {
                 account_id: 1,
@@ -160,7 +169,7 @@ mod tests {
                 description: None,
             },
         ];
-        
+
         assert!(TransactionService::validate_transaction_balance(&entries).is_ok());
     }
 
@@ -169,7 +178,7 @@ mod tests {
         let currency = Currency::new("EUR", 2, "€").unwrap();
         let amount1 = Money::from_minor_units(1000, currency.clone()); // €10.00
         let amount2 = Money::from_minor_units(1500, currency.clone()); // €15.00
-        
+
         let entries = vec![
             TransactionEntryInput {
                 account_id: 1,
@@ -184,7 +193,7 @@ mod tests {
                 description: None,
             },
         ];
-        
+
         let result = TransactionService::validate_transaction_balance(&entries);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not balanced"));
@@ -194,19 +203,22 @@ mod tests {
     fn test_validate_transaction_balance_too_few_entries() {
         let currency = Currency::new("EUR", 2, "€").unwrap();
         let amount = Money::from_minor_units(1000, currency);
-        
-        let entries = vec![
-            TransactionEntryInput {
-                account_id: 1,
-                amount,
-                entry_type: EntryType::Credit,
-                description: None,
-            },
-        ];
-        
+
+        let entries = vec![TransactionEntryInput {
+            account_id: 1,
+            amount,
+            entry_type: EntryType::Credit,
+            description: None,
+        }];
+
         let result = TransactionService::validate_transaction_balance(&entries);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("at least 2 entries"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("at least 2 entries")
+        );
     }
 
     #[test]
@@ -214,7 +226,7 @@ mod tests {
         let currency = Currency::new("EUR", 2, "€").unwrap();
         let amount = Money::from_minor_units(-1000, currency.clone()); // Negative amount
         let amount2 = Money::from_minor_units(1000, currency);
-        
+
         let entries = vec![
             TransactionEntryInput {
                 account_id: 1,
@@ -229,7 +241,7 @@ mod tests {
                 description: None,
             },
         ];
-        
+
         let result = TransactionService::validate_transaction_balance(&entries);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("must be positive"));

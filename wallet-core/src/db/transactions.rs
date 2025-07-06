@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use chrono::NaiveDate;
 use sqlx::Row;
+use std::sync::Arc;
 
 use crate::db::connection::Database;
 use crate::errors::Result;
-use crate::{Transaction, TransactionEntry, EntryType, Money, Currency};
+use crate::{Currency, EntryType, Money, Transaction, TransactionEntry};
 
 pub struct TransactionRepository {
     db: Arc<Database>,
@@ -66,7 +66,7 @@ impl TransactionRepository {
 
         // Execute query with parameters
         let mut query_builder = sqlx::query(&query);
-        
+
         if let Some(aid) = account_id {
             query_builder = query_builder.bind(aid);
         }
@@ -82,7 +82,7 @@ impl TransactionRepository {
         let mut transactions = Vec::new();
         for row in rows {
             let transaction_id: i64 = row.get("transaction_id");
-            
+
             // Get entries for this transaction
             let entries = self.get_entries_for_transaction(transaction_id).await?;
 
@@ -134,10 +134,10 @@ impl TransactionRepository {
         entries: Vec<crate::services::transaction_service::TransactionEntryInput>,
     ) -> Result<Transaction> {
         use chrono::Utc;
-        
+
         // Start transaction
         let mut tx = self.db.pool.begin().await?;
-        
+
         // Insert transaction record
         let transaction_result = sqlx::query(
             r#"
@@ -150,9 +150,9 @@ impl TransactionRepository {
         .bind(Utc::now())
         .execute(&mut *tx)
         .await?;
-        
+
         let transaction_id = transaction_result.last_insert_rowid();
-        
+
         // Insert transaction entries
         let mut created_entries = Vec::new();
         for entry_input in entries {
@@ -160,7 +160,7 @@ impl TransactionRepository {
                 crate::EntryType::Debit => "debit",
                 crate::EntryType::Credit => "credit",
             };
-            
+
             let entry_result = sqlx::query(
                 r#"
                 INSERT INTO transaction_entries (
@@ -179,9 +179,9 @@ impl TransactionRepository {
             .bind(Utc::now())
             .execute(&mut *tx)
             .await?;
-            
+
             let entry_id = entry_result.last_insert_rowid();
-            
+
             created_entries.push(crate::TransactionEntry {
                 id: Some(entry_id),
                 transaction_id,
@@ -192,10 +192,10 @@ impl TransactionRepository {
                 created_at: Utc::now(),
             });
         }
-        
+
         // Commit transaction
         tx.commit().await?;
-        
+
         Ok(crate::Transaction {
             id: Some(transaction_id),
             description,
@@ -208,7 +208,10 @@ impl TransactionRepository {
         })
     }
 
-    async fn get_entries_for_transaction(&self, transaction_id: i64) -> Result<Vec<TransactionEntry>> {
+    async fn get_entries_for_transaction(
+        &self,
+        transaction_id: i64,
+    ) -> Result<Vec<TransactionEntry>> {
         let rows = sqlx::query(
             r#"
             SELECT 
@@ -242,9 +245,12 @@ impl TransactionRepository {
             let entry_type = match entry_type_str.as_str() {
                 "debit" => EntryType::Debit,
                 "credit" => EntryType::Credit,
-                _ => return Err(crate::errors::WalletError::ValidationError(
-                    format!("Invalid entry type: {}", entry_type_str)
-                ).into()),
+                _ => {
+                    return Err(crate::errors::WalletError::ValidationError(format!(
+                        "Invalid entry type: {}",
+                        entry_type_str
+                    )));
+                }
             };
 
             entries.push(TransactionEntry {
