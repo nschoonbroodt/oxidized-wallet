@@ -33,25 +33,25 @@ const fetchDashboardData = async () => {
   try {
     // Fetch net worth
     const netWorthResult = await commands.getNetWorth();
-    const netWorth = unwrapResult(netWorthResult);
+    const netWorth = unwrapResult(netWorthResult) as Money;
     metrics.value[0].value = formatMoney(netWorth);
     metrics.value[0].loading = false;
     
     // Fetch total assets
     const totalAssetsResult = await commands.getTotalAssets();
-    const totalAssets = unwrapResult(totalAssetsResult);
+    const totalAssets = unwrapResult(totalAssetsResult) as Money;
     metrics.value[1].value = formatMoney(totalAssets);
     metrics.value[1].loading = false;
     
     // Fetch monthly income
     const monthlyIncomeResult = await commands.getCurrentMonthIncome();
-    const monthlyIncome = unwrapResult(monthlyIncomeResult);
+    const monthlyIncome = unwrapResult(monthlyIncomeResult) as Money;
     metrics.value[2].value = formatMoney(monthlyIncome);
     metrics.value[2].loading = false;
     
     // Fetch monthly expenses
     const monthlyExpensesResult = await commands.getCurrentMonthExpenses();
-    const monthlyExpenses = unwrapResult(monthlyExpensesResult);
+    const monthlyExpenses = unwrapResult(monthlyExpensesResult) as Money;
     metrics.value[3].value = formatMoney(monthlyExpenses);
     metrics.value[3].loading = false;
     

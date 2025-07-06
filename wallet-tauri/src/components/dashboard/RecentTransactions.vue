@@ -27,27 +27,6 @@ const formatDate = (dateString: string): string => {
   }).format(date);
 };
 
-const getTransactionType = (transaction: Transaction): { type: string; amount: Money; color: string } => {
-  // For a simple display, we'll show the first entry's details
-  // In a real app, you might want to show "Transfer" for internal moves
-  if (transaction.entries.length > 0) {
-    const firstEntry = transaction.entries[0];
-    const isDebit = firstEntry.entry_type === "Debit";
-    
-    return {
-      type: isDebit ? "Entrée" : "Sortie",
-      amount: firstEntry.amount,
-      color: isDebit ? "text-green-600" : "text-red-600"
-    };
-  }
-  
-  // Fallback
-  return {
-    type: "Transaction",
-    amount: { amount_minor: 0n, currency: { code: "EUR", minor_unit_scale: 2, symbol: "€" } },
-    color: "text-gray-600"
-  };
-};
 
 const fetchRecentTransactions = async () => {
   loading.value = true;

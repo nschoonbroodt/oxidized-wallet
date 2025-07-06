@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
 import AppSidebar from "./components/layout/AppSidebar.vue";
-import MainContent from "./components/layout/MainContent.vue";
 import { useRoute } from "vue-router";
 import { computed } from "vue";
 

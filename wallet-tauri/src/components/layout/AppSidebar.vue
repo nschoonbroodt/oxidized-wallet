@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRoute, RouterLink } from "vue-router";
+import { RouterLink } from "vue-router";
 import {
   Sidebar,
   SidebarContent,
@@ -12,12 +12,10 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
 import { computed } from "vue";
 import { router } from "@/router";
 
-const route = useRoute();
 
 const menuItems = computed(() => {
   return router

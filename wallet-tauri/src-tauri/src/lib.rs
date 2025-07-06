@@ -33,7 +33,9 @@ pub fn run() {
     {
         builder
             .export(
-                Typescript::default().bigint(specta_typescript::BigIntExportBehavior::BigInt),
+                Typescript::default()
+                    .bigint(specta_typescript::BigIntExportBehavior::BigInt)
+                    .header("// @ts-nocheck\n/* eslint-disable */"),
                 "../src/bindings.ts",
             )
             .expect("Failed to export typescript bindings");

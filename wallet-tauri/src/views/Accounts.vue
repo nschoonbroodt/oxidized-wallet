@@ -78,7 +78,7 @@ const getBalanceClass = (money: Money): string => {
   return 'text-gray-500';
 };
 
-const onAccountCreated = (newAccount: Account) => {
+const onAccountCreated = (_newAccount: Account) => {
   showForm.value = false; // Hide form
   fetchAccounts(); // Refresh tree from server
 };

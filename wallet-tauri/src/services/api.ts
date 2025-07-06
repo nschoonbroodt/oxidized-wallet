@@ -1,5 +1,5 @@
 import { commands as tauriCommands } from "@/bindings";
-import type { Account, AccountNode, Transaction, TransactionFilters, Result } from "@/bindings";
+import type { Account, AccountNode, Transaction, TransactionFilters, Result, Money } from "@/bindings";
 import { mockAccounts } from "./mock/accounts";
 import { mockTransactions, getMockTransactionById } from "./mock/transactions";
 import { delay, EUR } from "./mock/utils";
@@ -29,8 +29,8 @@ const mockCommands = {
     name: string,
     account_type: Account["account_type"],
     parent_id: bigint | null,
-    description: string | null,
-    currency: string
+    _description: string | null,
+    _currency: string
   ): Promise<Result<Account, string>> {
     await delay(500); // Simulate API delay
 
@@ -41,7 +41,7 @@ const mockCommands = {
       account_type: account_type,
       parent_id: parent_id,
       currency: EUR, // Use the EUR constant from utils
-      description: description,
+      description: _description,
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -106,7 +106,7 @@ const mockCommands = {
     description: string,
     date: string,
     amountCents: bigint,
-    currencyCode: string,
+    _currencyCode: string,
     fromAccountId: bigint,
     toAccountId: bigint
   ): Promise<Result<Transaction, string>> {
@@ -135,7 +135,7 @@ const mockCommands = {
           transaction_id: BigInt(Date.now()),
           account_id: fromAccountId,
           amount: {
-            amount_minor: Number(amountCents),
+            amount_minor: amountCents,
             currency: EUR,
           },
           entry_type: "Credit", // Money comes FROM this account
@@ -147,7 +147,7 @@ const mockCommands = {
           transaction_id: BigInt(Date.now()),
           account_id: toAccountId,
           amount: {
-            amount_minor: Number(amountCents),
+            amount_minor: amountCents,
             currency: EUR,
           },
           entry_type: "Debit", // Money goes TO this account
@@ -161,6 +161,102 @@ const mockCommands = {
     mockTransactions.unshift(newTransaction);
     
     return { status: "ok", data: newTransaction };
+  },
+  
+  // Dashboard/reporting commands
+  async getNetWorth(): Promise<Result<Money, string>> {
+    await delay(300);
+    
+    // Calculate mock net worth (assets - liabilities)
+    const totalAssets = BigInt(50000 * 100); // €50,000 in cents
+    const totalLiabilities = BigInt(15000 * 100); // €15,000 in cents
+    const netWorth = totalAssets - totalLiabilities;
+    
+    return {
+      status: "ok",
+      data: {
+        amount_minor: netWorth,
+        currency: EUR,
+      },
+    };
+  },
+  
+  async getTotalAssets(): Promise<Result<Money, string>> {
+    await delay(300);
+    
+    return {
+      status: "ok",
+      data: {
+        amount_minor: BigInt(50000 * 100), // €50,000 in cents
+        currency: EUR,
+      },
+    };
+  },
+  
+  async getCurrentMonthIncome(): Promise<Result<Money, string>> {
+    await delay(300);
+    
+    return {
+      status: "ok",
+      data: {
+        amount_minor: BigInt(3500 * 100), // €3,500 in cents
+        currency: EUR,
+      },
+    };
+  },
+  
+  async getCurrentMonthExpenses(): Promise<Result<Money, string>> {
+    await delay(300);
+    
+    return {
+      status: "ok",
+      data: {
+        amount_minor: BigInt(2800 * 100), // €2,800 in cents
+        currency: EUR,
+      },
+    };
+  },
+  
+  async getAccountBalance(_accountId: bigint): Promise<Result<Money, string>> {
+    await delay(200);
+    
+    // Mock balance calculation - in reality this would sum transactions
+    const balanceAmount = BigInt(Math.floor(Math.random() * 10000) * 100); // Random balance
+    
+    return {
+      status: "ok",
+      data: {
+        amount_minor: balanceAmount,
+        currency: EUR,
+      },
+    };
+  },
+  
+  async getAccountBalanceWithChildren(_accountId: bigint): Promise<Result<Money, string>> {
+    await delay(300);
+    
+    // Mock hierarchical balance - slightly higher than individual balance
+    const balanceAmount = BigInt(Math.floor(Math.random() * 15000) * 100);
+    
+    return {
+      status: "ok",
+      data: {
+        amount_minor: balanceAmount,
+        currency: EUR,
+      },
+    };
+  },
+  
+  async getRecentTransactions(limit?: number): Promise<Result<Transaction[], string>> {
+    await delay(400);
+    
+    const maxTransactions = limit || 10;
+    const recentTransactions = mockTransactions.slice(0, maxTransactions);
+    
+    return {
+      status: "ok",
+      data: recentTransactions,
+    };
   },
 };
 

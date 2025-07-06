@@ -61,7 +61,7 @@ const getSimpleTransactionFlow = (transaction: Transaction): { from: string; to:
   return {
     from: getAccountName(creditEntry.account_id), // Money comes FROM the credited account
     to: getAccountName(debitEntry.account_id),    // Money goes TO the debited account
-    amount: debitEntry.amount.amount_minor,
+    amount: Number(debitEntry.amount.amount_minor),
     label
   };
 };
@@ -156,7 +156,7 @@ const createTransaction = async () => {
     const result = await commands.createSimpleTransaction(
       formData.value.description,
       formData.value.date,
-      amountCents,
+      BigInt(amountCents),
       "EUR", // Fixed currency for now
       formData.value.fromAccountId,
       formData.value.toAccountId,
@@ -434,7 +434,7 @@ onMounted(() => {
 
               <!-- Amount -->
               <div class="font-mono font-semibold">
-                {{ entry.entry_type === 'Debit' ? '+' : '-' }}€{{ formatAmount(entry.amount.amount_minor) }}
+                {{ entry.entry_type === 'Debit' ? '+' : '-' }}€{{ formatAmount(Number(entry.amount.amount_minor)) }}
               </div>
             </div>
           </div>
