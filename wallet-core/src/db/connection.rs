@@ -41,27 +41,16 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
-    #[tokio::test]
-    async fn test_database_creation_and_migration() {
-        // test on an in-memory SQLite database
-        let database_url = "sqlite::memory:";
-
-        // Test database creation
-        let db = Database::new(&database_url)
-            .await
-            .expect("Failed to create database");
-
-        // Test migration
-        db.migrate().await.expect("Failed to run migrations");
-
+    #[sqlx::test]
+    async fn test_database_creation_and_migration(pool: sqlx::SqlitePool) {
+        // Test that migration has already run (done automatically by sqlx::test)
         // Verify tables were created by querying one
         let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounts")
-            .fetch_one(&db.pool)
+            .fetch_one(&pool)
             .await
             .expect("Failed to query accounts table");
 
-        assert_eq!(count.0, 0); // Should be empty initially
+        assert_eq!(count.0, 5); // Should have 5 root accounts from migration
     }
 }

@@ -25,20 +25,15 @@ impl TransactionRepository {
     ) -> Result<Vec<Transaction>> {
         // Build dynamic WHERE clause based on filters
         let mut where_conditions = Vec::new();
-        let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Sqlite> + Send + Sync>> = Vec::new();
-        let mut param_count = 0;
 
-        if let Some(_) = account_id {
-            where_conditions.push(format!("te.account_id = ?{}", param_count + 1));
-            param_count += 1;
+        if account_id.is_some() {
+            where_conditions.push("te.account_id = ?".to_string());
         }
-        if let Some(_) = from_date {
-            where_conditions.push(format!("t.transaction_date >= ?{}", param_count + 1));
-            param_count += 1;
+        if from_date.is_some() {
+            where_conditions.push("t.transaction_date >= ?".to_string());
         }
-        if let Some(_) = to_date {
-            where_conditions.push(format!("t.transaction_date <= ?{}", param_count + 1));
-            param_count += 1;
+        if to_date.is_some() {
+            where_conditions.push("t.transaction_date <= ?".to_string());
         }
 
         let where_clause = if where_conditions.is_empty() {

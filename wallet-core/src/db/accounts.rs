@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use sqlx::Row;
 
 use crate::errors::Result;
 use crate::{Account, db::connection::Database};
@@ -102,6 +103,98 @@ impl AccountRepository {
         .await?;
         Ok(account)
     }
+
+    /// Get raw debit/credit sums for an account from transaction entries
+    pub async fn get_account_transaction_sums(&self, account_id: i64) -> Result<Option<(i64, i64, String)>> {
+        let row = sqlx::query(
+            r#"
+            SELECT 
+                COALESCE(SUM(CASE WHEN entry_type = 'debit' THEN amount_minor ELSE 0 END), 0) as total_debits,
+                COALESCE(SUM(CASE WHEN entry_type = 'credit' THEN amount_minor ELSE 0 END), 0) as total_credits,
+                currency
+            FROM transaction_entries 
+            WHERE account_id = ?
+            GROUP BY currency
+            "#,
+        )
+        .bind(account_id)
+        .fetch_optional(&self.db.pool)
+        .await?;
+        
+        match row {
+            Some(row) => {
+                let total_debits: i64 = row.get("total_debits");
+                let total_credits: i64 = row.get("total_credits");
+                let currency: String = row.get("currency");
+                Ok(Some((total_debits, total_credits, currency)))
+            },
+            None => Ok(None),
+        }
+    }
+
+    /// Get all descendant account IDs using recursive CTE
+    pub async fn get_descendant_account_ids(&self, parent_account_id: i64) -> Result<Vec<i64>> {
+        let rows = sqlx::query(
+            r#"
+            WITH RECURSIVE account_tree AS (
+                -- Base case: start with the parent account
+                SELECT id FROM accounts WHERE id = ?
+                UNION ALL
+                -- Recursive case: find all children
+                SELECT a.id 
+                FROM accounts a
+                INNER JOIN account_tree at ON a.parent_id = at.id
+                WHERE a.is_active = 1
+            )
+            SELECT id FROM account_tree
+            "#,
+        )
+        .bind(parent_account_id)
+        .fetch_all(&self.db.pool)
+        .await?;
+
+        let account_ids = rows.iter().map(|row| row.get::<i64, _>("id")).collect();
+        Ok(account_ids)
+    }
+
+    /// Get raw debit/credit sums for multiple accounts (for hierarchical balance)
+    pub async fn get_multiple_accounts_transaction_sums(&self, account_ids: &[i64]) -> Result<Option<(i64, i64, String)>> {
+        if account_ids.is_empty() {
+            return Ok(None);
+        }
+
+        // Create placeholders for the IN clause
+        let placeholders = vec!["?"; account_ids.len()].join(",");
+        let query = format!(
+            r#"
+            SELECT 
+                COALESCE(SUM(CASE WHEN entry_type = 'debit' THEN amount_minor ELSE 0 END), 0) as total_debits,
+                COALESCE(SUM(CASE WHEN entry_type = 'credit' THEN amount_minor ELSE 0 END), 0) as total_credits,
+                currency
+            FROM transaction_entries 
+            WHERE account_id IN ({})
+            GROUP BY currency
+            "#,
+            placeholders
+        );
+
+        let mut query_builder = sqlx::query(&query);
+        for account_id in account_ids {
+            query_builder = query_builder.bind(account_id);
+        }
+
+        let row = query_builder.fetch_optional(&self.db.pool).await?;
+        
+        match row {
+            Some(row) => {
+                let total_debits: i64 = row.get("total_debits");
+                let total_credits: i64 = row.get("total_credits");
+                let currency: String = row.get("currency");
+                Ok(Some((total_debits, total_credits, currency)))
+            },
+            None => Ok(None),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -111,11 +204,6 @@ mod tests {
     use chrono::Utc;
     use std::sync::Arc;
 
-    async fn setup_test_db() -> Arc<Database> {
-        let db = Database::new("sqlite::memory:").await.unwrap();
-        db.migrate().await.unwrap();
-        Arc::new(db)
-    }
 
     fn create_test_account() -> Account {
         Account {
@@ -131,9 +219,9 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_create_account() {
-        let db = setup_test_db().await;
+    #[sqlx::test]
+    async fn test_create_account(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
         let repo = AccountRepository::new(db);
         let test_account = create_test_account();
 
@@ -157,9 +245,9 @@ mod tests {
         assert!(created_account.updated_at <= Utc::now());
     }
 
-    #[tokio::test]
-    async fn test_get_by_id() {
-        let db = setup_test_db().await;
+    #[sqlx::test]
+    async fn test_get_by_id(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
         let repo = AccountRepository::new(db);
         let test_account = create_test_account();
 
@@ -187,9 +275,9 @@ mod tests {
         assert_eq!(retrieved_account.updated_at, created_account.updated_at);
     }
 
-    #[tokio::test]
-    async fn test_get_by_id_not_found() {
-        let db = setup_test_db().await;
+    #[sqlx::test]
+    async fn test_get_by_id_not_found(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
         let repo = AccountRepository::new(db);
 
         // Try to get an account that doesn't exist
@@ -199,9 +287,9 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[tokio::test]
-    async fn test_create_account_with_parent() {
-        let db = setup_test_db().await;
+    #[sqlx::test]
+    async fn test_create_account_with_parent(pool: sqlx::SqlitePool) {
+        let db = Arc::new(Database { pool });
         let repo = AccountRepository::new(db);
 
         // Create parent account
