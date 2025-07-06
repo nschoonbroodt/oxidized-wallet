@@ -36,8 +36,7 @@ impl AccountService {
         let parent = self.repository.get_by_id(parent_id).await?;
         if parent.account_type != account_type {
             return Err(WalletError::ValidationError(format!(
-                "Account type {:?} must be created under a parent of the same type",
-                account_type
+                "Account type {account_type:?} must be created under a parent of the same type"
             )));
         }
 
@@ -202,10 +201,7 @@ impl AccountService {
             match self.calculate_balance(account_id).await {
                 Ok(balance) => balances.push((account_id, balance)),
                 Err(e) => {
-                    eprintln!(
-                        "Failed to calculate balance for account {}: {}",
-                        account_id, e
-                    );
+                    eprintln!("Failed to calculate balance for account {account_id}: {e}");
                 }
             }
         }
@@ -219,15 +215,13 @@ impl AccountService {
                 Ok(account) => {
                     if !account.is_active {
                         return Err(WalletError::ValidationError(format!(
-                            "Account {} is inactive",
-                            account_id
+                            "Account {account_id} is inactive"
                         )));
                     }
                 }
                 Err(_) => {
                     return Err(WalletError::ValidationError(format!(
-                        "Account {} does not exist",
-                        account_id
+                        "Account {account_id} does not exist"
                     )));
                 }
             }
@@ -288,8 +282,7 @@ impl AccountService {
         let children = self.get_children(id).await?;
         if !children.is_empty() {
             return Err(WalletError::ValidationError(format!(
-                "Cannot deactivate account {} - it has {} child accounts",
-                id,
+                "Cannot deactivate account {id} - it has {} child accounts",
                 children.len()
             )));
         }
@@ -360,7 +353,7 @@ mod tests {
                     .iter()
                     .find(|acc| acc.name == root_name && acc.parent_id.is_none())
                     .map(|acc| acc.id.unwrap())
-                    .unwrap_or_else(|| panic!("Root account '{}' not found", root_name))
+                    .unwrap_or_else(|| panic!("Root account '{root_name}' not found"))
             }
         };
 

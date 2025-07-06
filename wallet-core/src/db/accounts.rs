@@ -178,10 +178,9 @@ impl AccountRepository {
                 COALESCE(SUM(CASE WHEN entry_type = 'credit' THEN amount_minor ELSE 0 END), 0) as total_credits,
                 currency
             FROM transaction_entries 
-            WHERE account_id IN ({})
+            WHERE account_id IN ({placeholders})
             GROUP BY currency
-            "#,
-            placeholders
+            "#
         );
 
         let mut query_builder = sqlx::query(&query);

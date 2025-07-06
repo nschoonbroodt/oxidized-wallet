@@ -42,8 +42,8 @@ impl TransactionRepository {
             format!("WHERE {}", where_conditions.join(" AND "))
         };
 
-        let limit_clause = limit.map(|l| format!("LIMIT {}", l)).unwrap_or_default();
-        let offset_clause = offset.map(|o| format!("OFFSET {}", o)).unwrap_or_default();
+        let limit_clause = limit.map(|l| format!("LIMIT {l}")).unwrap_or_default();
+        let offset_clause = offset.map(|o| format!("OFFSET {o}")).unwrap_or_default();
 
         let query = format!(
             r#"
@@ -57,11 +57,10 @@ impl TransactionRepository {
                 t.notes
             FROM transactions t
             JOIN transaction_entries te ON t.id = te.transaction_id
-            {}
+            {where_clause}
             ORDER BY t.transaction_date DESC, t.id DESC
-            {} {}
-            "#,
-            where_clause, limit_clause, offset_clause
+            {limit_clause} {offset_clause}
+            "#
         );
 
         // Execute query with parameters
@@ -247,8 +246,7 @@ impl TransactionRepository {
                 "credit" => EntryType::Credit,
                 _ => {
                     return Err(crate::errors::WalletError::ValidationError(format!(
-                        "Invalid entry type: {}",
-                        entry_type_str
+                        "Invalid entry type: {entry_type_str}"
                     )));
                 }
             };

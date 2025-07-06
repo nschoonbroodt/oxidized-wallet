@@ -86,10 +86,7 @@ impl ReportService {
                     }
                     Err(e) => {
                         // Log error but continue with other accounts
-                        eprintln!(
-                            "Failed to calculate balance for account {}: {}",
-                            account_id, e
-                        );
+                        eprintln!("Failed to calculate balance for account {account_id}: {e}");
                     }
                 }
             }
@@ -154,8 +151,7 @@ impl ReportService {
                     }
                     Err(e) => {
                         eprintln!(
-                            "Failed to calculate monthly balance for account {}: {}",
-                            account_id, e
+                            "Failed to calculate monthly balance for account {account_id}: {e}"
                         );
                     }
                 }

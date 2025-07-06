@@ -109,8 +109,7 @@ impl TransactionService {
 
         if total_debits != total_credits {
             return Err(WalletError::ValidationError(format!(
-                "Transaction is not balanced: debits={}, credits={}",
-                total_debits, total_credits
+                "Transaction is not balanced: debits={total_debits}, credits={total_credits}"
             )));
         }
 
