@@ -132,6 +132,87 @@ impl TransactionRepository {
         })
     }
 
+    pub async fn create_transaction(
+        &self,
+        description: String,
+        transaction_date: NaiveDate,
+        entries: Vec<crate::services::transaction_service::TransactionEntryInput>,
+    ) -> Result<Transaction> {
+        use chrono::Utc;
+        
+        // Start transaction
+        let mut tx = self.db.pool.begin().await?;
+        
+        // Insert transaction record
+        let transaction_result = sqlx::query(
+            r#"
+            INSERT INTO transactions (description, transaction_date, created_at)
+            VALUES (?, ?, ?)
+            "#,
+        )
+        .bind(&description)
+        .bind(transaction_date)
+        .bind(Utc::now())
+        .execute(&mut *tx)
+        .await?;
+        
+        let transaction_id = transaction_result.last_insert_rowid();
+        
+        // Insert transaction entries
+        let mut created_entries = Vec::new();
+        for entry_input in entries {
+            let entry_type_str = match entry_input.entry_type {
+                crate::EntryType::Debit => "debit",
+                crate::EntryType::Credit => "credit",
+            };
+            
+            let entry_result = sqlx::query(
+                r#"
+                INSERT INTO transaction_entries (
+                    transaction_id, account_id, amount_minor, currency, 
+                    entry_type, description, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                "#,
+            )
+            .bind(transaction_id)
+            .bind(entry_input.account_id)
+            .bind(entry_input.amount.amount_minor())
+            .bind(entry_input.amount.currency().code())
+            .bind(entry_type_str)
+            .bind(&entry_input.description)
+            .bind(Utc::now())
+            .execute(&mut *tx)
+            .await?;
+            
+            let entry_id = entry_result.last_insert_rowid();
+            
+            created_entries.push(crate::TransactionEntry {
+                id: Some(entry_id),
+                transaction_id,
+                account_id: entry_input.account_id,
+                amount: entry_input.amount,
+                entry_type: entry_input.entry_type,
+                description: entry_input.description,
+                created_at: Utc::now(),
+            });
+        }
+        
+        // Commit transaction
+        tx.commit().await?;
+        
+        Ok(crate::Transaction {
+            id: Some(transaction_id),
+            description,
+            reference: None,
+            transaction_date,
+            created_at: Utc::now(),
+            tags: None,
+            notes: None,
+            entries: created_entries,
+        })
+    }
+
     async fn get_entries_for_transaction(&self, transaction_id: i64) -> Result<Vec<TransactionEntry>> {
         let rows = sqlx::query(
             r#"

@@ -41,7 +41,7 @@ impl TransactionService {
         transaction_date: NaiveDate,
         entries: Vec<TransactionEntryInput>,
     ) -> Result<Transaction> {
-        todo!("Transaction creation not yet implemented")
+        self.repository.create_transaction(description, transaction_date, entries).await
     }
 
     pub async fn get_transaction(&self, id: i64) -> Result<Transaction> {
@@ -69,20 +69,20 @@ impl TransactionService {
         description: String,
         date: NaiveDate,
         amount: Money,
-        from_account_id: i64,  // Account being debited
-        to_account_id: i64,    // Account being credited
+        from_account_id: i64,  // Account money comes from (credited)
+        to_account_id: i64,    // Account money goes to (debited)
     ) -> Result<Transaction> {
         let entries = vec![
             TransactionEntryInput {
                 account_id: from_account_id,
                 amount: amount.clone(),
-                entry_type: crate::EntryType::Debit,
+                entry_type: crate::EntryType::Credit,  // Money leaves the FROM account
                 description: None,
             },
             TransactionEntryInput {
                 account_id: to_account_id,
                 amount,
-                entry_type: crate::EntryType::Credit,
+                entry_type: crate::EntryType::Debit,   // Money enters the TO account
                 description: None,
             },
         ];
