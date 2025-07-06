@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { commands, unwrapResult } from "@/services/api";
-import type { Account } from "@/bindings";
+import type { Account, AccountNode } from "@/bindings";
 import AccountForm from "@/components/AccountForm.vue";
 
-const accounts = ref<Account[]>([]);
+const accountNodes = ref<AccountNode[]>([]);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 const showForm = ref(false);
@@ -14,8 +14,8 @@ const fetchAccounts = async () => {
   error.value = null;
 
   try {
-    const result = await commands.getAccounts();
-    accounts.value = unwrapResult(result);
+    const result = await commands.getAccountTree();
+    accountNodes.value = unwrapResult(result);
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
     console.error("Failed to fetch accounts:", e);
@@ -25,9 +25,8 @@ const fetchAccounts = async () => {
 };
 
 const onAccountCreated = (newAccount: Account) => {
-  accounts.value.push(newAccount); // Add to list
   showForm.value = false; // Hide form
-  // Could also call fetchAccounts() to refresh from server
+  fetchAccounts(); // Refresh tree from server
 };
 
 onMounted(() => {
@@ -55,22 +54,30 @@ onMounted(() => {
 
     <div v-if="loading">Loading accounts...</div>
     <div v-else-if="error" class="text-red-500">Error: {{ error }}</div>
-    <div v-else-if="accounts.length === 0">No accounts found</div>
+    <div v-else-if="accountNodes.length === 0">No accounts found</div>
     <div v-else>
-      <div class="space-y-4">
+      <div class="space-y-1">
         <div
-          v-for="account in accounts"
-          :key="account.id?.toString()"
-          class="p-4 border rounded"
+          v-for="node in accountNodes"
+          :key="node.account.id?.toString()"
+          :style="{ paddingLeft: `${node.level * 1.5}rem` }"
+          class="py-2 px-3 border rounded bg-white hover:bg-gray-50"
         >
-          <h3 class="font-semibold">{{ account.name }}</h3>
-          <p class="text-sm text-gray-600">Type: {{ account.account_type }}</p>
-          <p class="text-sm text-gray-600">
-            Currency: {{ account.currency.symbol }}
-          </p>
-          <p v-if="account.description" class="text-sm">
-            {{ account.description }}
-          </p>
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="font-medium">{{ node.account.name }}</span>
+              <span class="text-sm text-gray-500 ml-2"
+                >({{ node.account.account_type }})</span
+              >
+              <div
+                v-if="node.account.description"
+                class="text-sm text-gray-600"
+              >
+                {{ node.account.description }}
+              </div>
+            </div>
+            <div class="text-xs text-gray-400">Level {{ node.level }}</div>
+          </div>
         </div>
       </div>
     </div>

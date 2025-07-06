@@ -1,5 +1,6 @@
 use tauri::State;
 use wallet_core::{Account, AccountType, Currency};
+use wallet_core::AccountNode;
 
 use crate::AppState;
 
@@ -47,5 +48,15 @@ pub async fn create_account(
     ).await {
         Ok(account) => Ok(account),
         Err(e) => Err(format!("Failed to create account: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_account_tree(state: State<'_, AppState>) -> Result<Vec<AccountNode>, String> {
+    let account_service = wallet_core::AccountService::new(state.db.clone());
+    match account_service.get_account_tree().await {
+        Ok(tree) => Ok(tree),
+        Err(e) => Err(format!("Failed to get account tree: {}", e)),
     }
 }

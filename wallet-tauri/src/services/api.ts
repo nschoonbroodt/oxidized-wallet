@@ -1,5 +1,5 @@
 import { commands as tauriCommands } from "@/bindings";
-import type { Account, Result } from "@/bindings";
+import type { Account, AccountNode, Result } from "@/bindings";
 import { mockAccounts } from "./mock/accounts";
 import { delay, EUR } from "./mock/utils";
 
@@ -50,6 +50,32 @@ const mockCommands = {
     mockAccounts.push(newAccount);
 
     return { status: "ok", data: newAccount };
+  },
+  async getAccountTree(): Promise<Result<AccountNode[], string>> {
+    await delay(300);
+    
+    // Build tree structure from mock data (depth-first traversal)
+    const buildTree = (parentId: bigint | null = null, level: number = 0, path: string = ""): AccountNode[] => {
+      return mockAccounts
+        .filter(acc => acc.parent_id === parentId)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .flatMap(account => {
+          const nodePath = path ? `${path} > ${account.name}` : account.name;
+          const node: AccountNode = {
+            account,
+            level,
+            path: nodePath
+          };
+          
+          // Get children recursively
+          const children = buildTree(account.id!, level + 1, nodePath);
+          
+          // Return this node followed by its children
+          return [node, ...children];
+        });
+    };
+
+    return { status: "ok", data: buildTree() };
   },
 };
 

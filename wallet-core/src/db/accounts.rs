@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::errors::Result;
 use crate::{Account, db::connection::Database};
+use crate::AccountNode;
 
 pub struct AccountRepository {
     db: Arc<Database>,
@@ -43,6 +44,51 @@ impl AccountRepository {
         .fetch_all(&self.db.pool)
         .await?;
         Ok(accounts)
+    }
+
+    pub async fn get_account_tree(&self) -> Result<Vec<AccountNode>> {
+        let nodes: Vec<AccountNode> = sqlx::query_as(
+            r#"
+            WITH RECURSIVE account_tree AS (
+                -- Base case: root accounts
+                SELECT 
+                    id, name, account_type, parent_id, currency, description, 
+                    is_active, created_at, updated_at,
+                    0 as level, 
+                    name as path
+                FROM accounts 
+                WHERE parent_id IS NULL AND is_active = true
+                
+                UNION ALL
+                
+                -- Recursive case: children  
+                SELECT 
+                    a.id, a.name, a.account_type, a.parent_id, a.currency, 
+                    a.description, a.is_active, a.created_at, a.updated_at,
+                    t.level + 1, 
+                    t.path || ' > ' || a.name
+                FROM accounts a
+                JOIN account_tree t ON a.parent_id = t.id
+                WHERE a.is_active = true
+            )
+            SELECT 
+                id, name, account_type, parent_id, currency, description, 
+                is_active, created_at, updated_at, level, path
+            FROM account_tree 
+            ORDER BY 
+                CASE account_type 
+                    WHEN 'asset' THEN 1 
+                    WHEN 'liability' THEN 2 
+                    WHEN 'equity' THEN 3 
+                    WHEN 'income' THEN 4 
+                    WHEN 'expense' THEN 5 
+                END,
+                path
+            "#,
+        )
+        .fetch_all(&self.db.pool)
+        .await?;
+        Ok(nodes)
     }
 
     pub async fn get_by_id(&self, id: i64) -> Result<Account> {

@@ -10,6 +10,8 @@ pub enum WalletError {
     DatabaseError(#[from] sqlx::Error),
     #[error(transparent)]
     MigrationError(#[from] sqlx::migrate::MigrateError),
+    #[error("Validation error: {0}")]
+    ValidationError(String),
 }
 
 #[derive(Error, Debug)]

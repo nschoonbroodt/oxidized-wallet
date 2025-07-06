@@ -12,6 +12,14 @@ CREATE TABLE accounts (
     UNIQUE(name, parent_id),
     CHECK(id != parent_id)
 );
+ -- Insert the five root accounts
+  INSERT INTO accounts (name, account_type, parent_id, currency, description, is_active) VALUES
+    ('Assets', 'asset', NULL, 'EUR', 'All asset accounts', 1),
+    ('Liabilities', 'liability', NULL, 'EUR', 'All liability accounts', 1),
+    ('Equity', 'equity', NULL, 'EUR', 'Owner''s equity accounts', 1),
+    ('Income', 'income', NULL, 'EUR', 'All income accounts', 1),
+    ('Expenses', 'expense', NULL, 'EUR', 'All expense accounts', 1);
+
 
 CREATE TABLE transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

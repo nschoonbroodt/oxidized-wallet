@@ -43,3 +43,11 @@ impl FromRow<'_, sqlx::sqlite::SqliteRow> for Account {
         })
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, FromRow)]
+pub struct AccountNode {
+    #[sqlx(flatten)]
+    pub account: Account,
+    pub level: i32,
+    pub path: String,
+}

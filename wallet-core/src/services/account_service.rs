@@ -6,6 +6,7 @@ use crate::db::connection::Database;
 use crate::errors::{Result, WalletError};
 use crate::{Account, Currency, Money};
 use crate::{AccountType, db::accounts::AccountRepository};
+use crate::AccountNode;
 
 pub struct AccountService {
     repository: AccountRepository,
@@ -25,18 +26,36 @@ impl AccountService {
         parent_id: Option<i64>,
         currency: Currency,
     ) -> Result<Account> {
-        // Validate parent exists if specified
-        if let Some(parent_id) = parent_id {
-            // TODO: Implement validation to check if parent account exists
+        // Validate parent_id is provided (no root accounts allowed)
+        let parent_id = parent_id.ok_or_else(|| {
+            WalletError::ValidationError("Parent account is required".to_string())
+        })?;
+
+        // Validate parent exists and has same account type
+        let parent = self.repository.get_by_id(parent_id).await?;
+        if parent.account_type != account_type {
+            return Err(WalletError::ValidationError(
+                format!(
+                    "Account type {:?} must be created under a parent of the same type",
+                    account_type
+                ),
+            ));
         }
-        // TODO: validate account name
+
+        // Validate account name is not empty
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(WalletError::ValidationError(
+                "Account name cannot be empty".to_string(),
+            ));
+        }
 
         // Create account
         let account = Account {
             id: None,
-            name,
+            name: name.to_string(),
             account_type,
-            parent_id,
+            parent_id: Some(parent_id),
             currency,
             description: None,
             is_active: true,
@@ -54,6 +73,10 @@ impl AccountService {
 
     pub async fn get_accounts(&self) -> Result<Vec<Account>> {
         self.repository.get_all().await
+    }
+
+    pub async fn get_account_tree(&self) -> Result<Vec<AccountNode>> {
+        self.repository.get_account_tree().await
     }
 
     pub async fn get_account(&self, id: i64) -> Result<Account> {

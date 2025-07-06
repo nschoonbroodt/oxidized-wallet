@@ -29,15 +29,15 @@ const fetchAccountsForDropdown = async () => {
     const result = await commands.getAccounts();
     accounts.value = unwrapResult(result);
   } catch (e) {
-    console.error('Failed to fetch accounts for dropdown:', e);
+    console.error("Failed to fetch accounts for dropdown:", e);
   }
 };
 
 // Computed property for valid parent accounts - filter by same type
 const parentAccounts = computed(() => {
   if (!formData.value.account_type) return [];
-  
-  return accounts.value.filter(account => {
+
+  return accounts.value.filter((account) => {
     // Same type can be parent of same type
     return account.account_type === formData.value.account_type;
   });
@@ -120,7 +120,6 @@ onMounted(() => {
     <div>
       <label class="block text-sm font-medium mb-1">Parent Account</label>
       <select v-model="formData.parent_id" class="w-full p-2 border rounded">
-        <option value="">None (Root account)</option>
         <option
           v-for="account in parentAccounts"
           :key="account.id?.toString()"
