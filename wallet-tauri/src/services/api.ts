@@ -1,6 +1,7 @@
 import { commands as tauriCommands } from "@/bindings";
-import type { Account, AccountNode, Result } from "@/bindings";
+import type { Account, AccountNode, Transaction, TransactionFilters, Result } from "@/bindings";
 import { mockAccounts } from "./mock/accounts";
+import { mockTransactions, getMockTransactionById } from "./mock/transactions";
 import { delay, EUR } from "./mock/utils";
 
 // Check if we're running in Tauri
@@ -76,6 +77,30 @@ const mockCommands = {
     };
 
     return { status: "ok", data: buildTree() };
+  },
+  async getTransactions(filters: TransactionFilters): Promise<Result<Transaction[], string>> {
+    await delay(400);
+    
+    // Apply date filtering
+    let filteredTransactions = mockTransactions;
+    if (filters.from_date) {
+      filteredTransactions = filteredTransactions.filter(t => t.transaction_date >= filters.from_date!);
+    }
+    if (filters.to_date) {
+      filteredTransactions = filteredTransactions.filter(t => t.transaction_date <= filters.to_date!);
+    }
+
+    return { status: "ok", data: filteredTransactions };
+  },
+  async getTransaction(id: bigint): Promise<Result<Transaction, string>> {
+    await delay(200);
+    
+    const transaction = getMockTransactionById(id);
+    if (!transaction) {
+      return { status: "error", error: `Transaction ${id} not found` };
+    }
+    
+    return { status: "ok", data: transaction };
   },
 };
 

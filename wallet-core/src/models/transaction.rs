@@ -2,14 +2,13 @@ use crate::models::money::Money;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
 pub enum EntryType {
     Credit,
     Debit,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 pub struct TransactionEntry {
     pub id: Option<i64>,
     pub transaction_id: i64,
@@ -20,7 +19,7 @@ pub struct TransactionEntry {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, specta::Type)]
 pub struct Transaction {
     pub id: Option<i64>,
     pub description: String,

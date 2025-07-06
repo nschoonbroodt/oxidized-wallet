@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Dashboard from "@/views/Dashboard.vue";
 import Accounts from "@/views/Accounts.vue";
-import { LayoutDashboard, Wallet } from "lucide-vue-next";
+import { LayoutDashboard, Wallet, ArrowUpDown } from "lucide-vue-next";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -33,6 +33,15 @@ export const router = createRouter({
       meta: {
         title: "Comptes",
         icon: Wallet,
+        showInNav: true,
+      },
+    },
+    {
+      path: "/transactions",
+      component: () => import("@/views/Transactions.vue"),
+      meta: {
+        title: "Transactions",
+        icon: ArrowUpDown,
         showInNav: true,
       },
     },

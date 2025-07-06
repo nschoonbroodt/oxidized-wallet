@@ -28,6 +28,22 @@ async getAccountTree() : Promise<Result<AccountNode[], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getTransactions(filters: TransactionFilters) : Promise<Result<Transaction[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_transactions", { filters }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getTransaction(id: bigint) : Promise<Result<Transaction, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_transaction", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -45,6 +61,11 @@ export type Account = { id: bigint | null; name: string; account_type: AccountTy
 export type AccountNode = { account: Account; level: number; path: string }
 export type AccountType = "Asset" | "Liability" | "Equity" | "Income" | "Expense"
 export type Currency = { code: string; minor_unit_scale: number; symbol: string }
+export type EntryType = "Credit" | "Debit"
+export type Money = { amount_minor: bigint; currency: Currency }
+export type Transaction = { id: bigint | null; description: string; reference: string | null; transaction_date: string; created_at: string; tags: string | null; notes: string | null; entries: TransactionEntry[] }
+export type TransactionEntry = { id: bigint | null; transaction_id: bigint; account_id: bigint; amount: Money; entry_type: EntryType; description: string | null; created_at: string }
+export type TransactionFilters = { account_id: bigint | null; from_date: string | null; to_date: string | null; limit: number | null; offset: number | null }
 
 /** tauri-specta globals **/
 

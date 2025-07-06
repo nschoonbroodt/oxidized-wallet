@@ -7,6 +7,7 @@ use crate::errors::{Result, WalletError};
 use crate::{Account, Currency, Money};
 use crate::{AccountType, db::accounts::AccountRepository};
 use crate::AccountNode;
+use chrono::NaiveDate;
 
 pub struct AccountService {
     repository: AccountRepository,
@@ -71,6 +72,18 @@ impl AccountService {
         todo!()
     }
 
+    pub async fn calculate_account_balance(&self, account_id: i64, as_of_date: Option<NaiveDate>) -> Result<Money> {
+        todo!("Account balance calculation with date not yet implemented")
+    }
+
+    pub async fn get_account_balances(&self, account_ids: &[i64]) -> Result<Vec<(i64, Money)>> {
+        todo!("Multiple account balances not yet implemented")
+    }
+
+    pub async fn validate_accounts(&self, account_ids: &[i64]) -> Result<()> {
+        todo!("Account validation not yet implemented")
+    }
+
     pub async fn get_accounts(&self) -> Result<Vec<Account>> {
         self.repository.get_all().await
     }
@@ -84,12 +97,14 @@ impl AccountService {
     }
 
     pub async fn update_account(&self, account: &Account) -> Result<Account> {
-        todo!();
+        todo!("Account update not yet implemented")
     }
+
     pub async fn deactivate_account(&self, id: i64) -> Result<()> {
-        todo!();
+        todo!("Account deactivation not yet implemented")
     }
+
     pub async fn get_children(&self, parent_id: i64) -> Result<Vec<Account>> {
-        todo!();
+        todo!("Get children accounts not yet implemented")
     }
 }

@@ -56,7 +56,6 @@ const menuItems = computed(() => {
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-      <Button>Nouvelle transaction</Button>
     </SidebarFooter>
   </Sidebar>
 </template>

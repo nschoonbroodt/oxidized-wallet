@@ -49,8 +49,7 @@ impl Currency {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, specta::Type)]
 pub struct Money {
     amount_minor: i64,
     currency: Currency,
@@ -91,5 +90,12 @@ impl Money {
 
     pub fn eur(amount: Decimal) -> Self {
         Self::new(amount, Currency::eur())
+    }
+
+    pub fn from_minor_units(amount_minor: i64, currency: Currency) -> Self {
+        Self {
+            amount_minor,
+            currency,
+        }
     }
 }
