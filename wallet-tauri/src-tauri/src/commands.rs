@@ -1,5 +1,4 @@
-use chrono::{Datelike, NaiveDate, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::NaiveDate;
 use tauri::State;
 use wallet_core::AccountNode;
 use wallet_core::{
@@ -26,7 +25,7 @@ pub async fn create_account(
     name: String,
     account_type: String,
     parent_id: Option<i64>,
-    description: Option<String>,
+    _description: Option<String>,
     currency: String,
 ) -> Result<Account, String> {
     // Convert string to AccountType enum
