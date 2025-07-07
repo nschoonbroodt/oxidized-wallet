@@ -66,6 +66,8 @@ Create a local-first personal finance tracking application with double-entry boo
 - 🎯 Transaction entry improvements (auto-complete, recent accounts)
 - 🎯 Better error handling and user feedback
 - 🎯 Database backup/restore UI
+- 🎯 UI consistency with shadcn-vue design system
+- 🎯 Dark mode support
 
 #### Deferred to Later Phases
 - 📅 User-defined categories and tagging system → Phase 3
@@ -74,7 +76,6 @@ Create a local-first personal finance tracking application with double-entry boo
 - 📅 Transaction editing (immutable by design)
 - 📅 Category-based expense analysis → Phase 3
 - 📅 Advanced reporting (balance sheet, income statement) → Phase 3
-- 📅 Dark mode support → Phase 3
 
 **Phase 2 Success Criteria**:
 - Transaction templates save time on recurring entries
@@ -82,6 +83,7 @@ Create a local-first personal finance tracking application with double-entry boo
 - Data export for backup and external analysis
 - Improved search and navigation efficiency
 - Professional error handling
+- Consistent UI with shadcn-vue components and dark mode
 
 ---
 
