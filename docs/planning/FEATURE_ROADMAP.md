@@ -5,92 +5,83 @@ Create a local-first personal finance tracking application with double-entry boo
 
 ## Development Phases
 
-### 🎯 MVP (Phase 1) - Core Foundation
-**Timeline**: 4-6 weeks  
+### 🎯 MVP (Phase 1) - Core Foundation ✅
 **Goal**: Functional double-entry bookkeeping with basic account management
 
 #### Account Management
-- 📋 Create hierarchical account structure (max 3 levels for MVP)
-- 📋 Account types: Asset, Liability, Equity, Income, Expense
-- 📋 Predefined French account categories:
-  - Assets: BoursoBank, SG, etc.
-  - Expenses: Transport → Voiture → Essence/Assurance
-- 📋 Account activation/deactivation (soft delete)
-- 📋 Account balance calculation with hierarchy
+- ✅ Create hierarchical account structure (5 levels supported)
+- ✅ Account types: Asset, Liability, Equity, Income, Expense
+- ✅ Account balance calculation with hierarchy
+- ⏳ Predefined French account categories → v0.2.0
+- ⏳ Account editing UI → v0.2.0
+- ⏳ Account deactivation UI (backend complete) → v0.2.0
 
 #### Transaction Management
-- 📋 Double-entry transaction creation
-- 📋 Manual transaction entry with validation
-- 📋 Transaction description and reference fields
-- 📋 Date-based transaction organization
-- 📋 Basic transaction listing and search by date
+- ✅ Double-entry transaction creation
+- ✅ Manual transaction entry with validation
+- ✅ Transaction description and reference fields
+- ✅ Date-based transaction organization
+- ✅ Basic transaction listing and search by date
 
 #### Core Reporting
-- 📋 Individual account balances
-- 📋 Total portfolio value
-- 📋 Monthly income vs expense summary
-- 📋 Account hierarchy view with balances
+- ✅ Individual account balances
+- ✅ Total portfolio value
+- ✅ Monthly income vs expense summary
+- ✅ Account hierarchy view with balances
 
 #### Technical Foundation
-- 📋 SQLite database with proper schema
-- 📋 Tauri application setup
-- 📋 Basic Vue 3 frontend
-- 📋 Core business logic in wallet-core
-- 📋 Double-entry validation and constraints
+- ✅ SQLite database with proper schema
+- ✅ Tauri application setup
+- ✅ Basic Vue 3 frontend
+- ✅ Core business logic in wallet-core
+- ✅ Double-entry validation and constraints
 
 #### User Interface (MVP)
-- 📋 Account tree view
-- 📋 Transaction entry form
-- 📋 Simple transaction list
-- 📋 Basic dashboard with key metrics
-- 📋 French language interface
+- ✅ Account tree view
+- ✅ Transaction entry form
+- ✅ Simple transaction list
+- ✅ Basic dashboard with key metrics
+- ✅ French language interface
 
-**MVP Success Criteria**:
-- Can create account hierarchy matching user's bank structure
-- Can enter transactions manually with double-entry validation
-- Shows accurate account balances and monthly summaries
-- Data persists locally in SQLite
+**MVP Success Criteria**: ✅
+- ✅ Can create account hierarchy matching user's bank structure
+- ✅ Can enter transactions manually with double-entry validation
+- ✅ Shows accurate account balances and monthly summaries
+- ✅ Data persists locally in SQLite
 
 ---
 
-### 🚀 Phase 2 - Enhanced Usability
+### 🚀 Phase 2 - Enhanced Usability (v0.2.0)
 **Timeline**: 3-4 weeks  
-**Goal**: Improved user experience and data management
+**Goal**: Polish MVP and improve daily usability  
+**Status**: In Planning - See `docs/planning/V0.2.0_PLAN.md`
 
-#### Enhanced Transaction Features
-- 📋 User-defined categories and tagging system
-- 📋 Transaction states (Pending, Confirmed)
-- 📋 Transaction reconciliation flags
-- 📋 Transaction editing (with audit trail)
-- 📋 Transaction deletion (with confirmation)
-- 📋 Duplicate transaction detection
-- 📋 Transaction templates for recurring entries
+#### Priority Features (v0.2.0)
+- 🎯 Transaction templates for recurring entries
+- 🎯 Account editing UI (backend already supports)
+- 🎯 Account deactivation UI (soft delete)
+- 🎯 CSV export functionality (transactions, balances, reports)
+- 🎯 Enhanced transaction search and filtering
+- 🎯 Keyboard shortcuts for power users
+- 🎯 Transaction entry improvements (auto-complete, recent accounts)
+- 🎯 Better error handling and user feedback
+- 🎯 Database backup/restore UI
 
-#### Improved Reporting
-- 📋 Account statements (transaction history per account)
-- 📋 Category-based expense analysis
-- 📋 Transaction reconciliation reports
-- 📋 Time-period comparisons (month-over-month, year-over-year)
-- 📋 Balance sheet report
-- 📋 Income statement report
-
-#### Data Management
-- 📋 CSV export functionality
-- 📋 Database backup/restore
-- 📋 Data validation and integrity checks
-- 📋 Transaction search and filtering
-
-#### UI/UX Improvements
-- 📋 Keyboard shortcuts
-- 📋 Transaction auto-complete
-- 📋 Better error messages and validation feedback
-- 📋 Responsive design for different screen sizes
-- 📋 Dark mode support
+#### Deferred to Later Phases
+- 📅 User-defined categories and tagging system → Phase 3
+- 📅 Transaction states (Pending, Confirmed) → Phase 3
+- 📅 Transaction reconciliation flags → Phase 3
+- 📅 Transaction editing (immutable by design)
+- 📅 Category-based expense analysis → Phase 3
+- 📅 Advanced reporting (balance sheet, income statement) → Phase 3
+- 📅 Dark mode support → Phase 3
 
 **Phase 2 Success Criteria**:
-- Rich transaction management with full CRUD operations
-- Comprehensive reporting for financial analysis
-- Robust data backup and export capabilities
+- Transaction templates save time on recurring entries
+- Complete account management UI (create, edit, deactivate)
+- Data export for backup and external analysis
+- Improved search and navigation efficiency
+- Professional error handling
 
 ---
 
