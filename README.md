@@ -12,9 +12,7 @@ A local-first personal finance tracking application with double-entry bookkeepin
 
 ## Project Status
 
-🚧 **In Development** - Currently in planning phase
-
-See [docs/planning/FEATURE_ROADMAP.md](docs/planning/FEATURE_ROADMAP.md) for development phases.
+✅ MVP Complete
 
 ## Documentation
 
@@ -26,16 +24,16 @@ See [docs/planning/FEATURE_ROADMAP.md](docs/planning/FEATURE_ROADMAP.md) for dev
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/oxidized-wallet.git
+git clone https://github.com/nschoonbroodt/oxidized-wallet.git
 cd oxidized-wallet
 
-# Setup development environment (coming soon)
-./scripts/setup-dev.sh
-
-# Run tests (coming soon)
+# Run tests
 cargo test
 
-# Start development server (coming soon)
+# Setup development environment
+cd wallet-tauri && npm install
+
+# Start development app
 cd wallet-tauri && cargo tauri dev
 ```
 
@@ -54,6 +52,3 @@ MIT License - See LICENSE file for details
 
 This is currently a personal learning project. Contributions may be accepted in the future.
 
-## Contact
-
-[Your contact information]

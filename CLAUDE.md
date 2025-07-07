@@ -19,24 +19,14 @@ Personal finance tracking software with double-entry bookkeeping, written in Rus
 - **Architecture**: Split codebase (wallet-core + wallet-tauri)
 
 ### Key Design Patterns
-- Repository pattern for data access
-- Service layer for business logic
-- Immutable transactions (audit trail)
+- Repository pattern for data access (internal layer)
+- Service layer for business logic (public layer)
 - Integer-based money storage (avoid floating-point errors)
 
 ## Development Commands
 
 ### Setup
 ```bash
-# Initialize workspace
-cargo init --name oxidized-wallet
-
-# Create core library
-cargo new --lib wallet-core
-
-# Create Tauri app with Vue template
-cargo create-tauri-app wallet-tauri --template vue-ts
-
 # Install frontend dependencies
 cd wallet-tauri/src-ui && npm install
 ```
@@ -49,7 +39,7 @@ cd wallet-core && cargo test
 # Run Tauri app in development mode
 cd wallet-tauri && cargo tauri dev
 
-# Database migrations
+# Database migrations (also run automatically in tauri)
 cd wallet-core && sqlx migrate run
 
 # Lint and format
@@ -60,31 +50,12 @@ cd wallet-tauri/src-ui && npm run dev
 ```
 
 ### Database Operations
-```bash
-# Create new migration
-sqlx migrate add <name>
-
-# Run migrations
-sqlx migrate run
-
-# Revert last migration
-sqlx migrate revert
-
-# Check database schema
-sqlx database setup
-```
+Managed on boot by tauri app and [sqlx:test]
 
 ## Current Development Phase
-**Phase**: Planning and Documentation
-**Next**: MVP Implementation (Phase 1)
-
-### MVP Features Checklist
-- [ ] Account hierarchy management
-- [ ] Double-entry transaction creation
-- [ ] Account balance calculation
-- [ ] Basic transaction listing
-- [ ] Monthly income/expense reporting
-- [ ] Simple React UI for account/transaction management
+**Phase**: MVP Complete - Planning v0.2.0
+**Status**: Production-ready MVP with full double-entry bookkeeping
+**Next**: v0.2.0. See plan in docs/planning/V0.2.0_PLAN.md
 
 ## Code Style Preferences
 - Use `thiserror` for error handling
@@ -109,14 +80,14 @@ sqlx database setup
 5. Account types determine normal balance direction
 
 ### Account Hierarchy
-- Maximum 5 levels deep
+- top level account = Assets, Liabilities, Income, Expenses, Equity (created by migration)
 - Unique names within same parent
 - Soft delete (mark inactive, preserve history)
 - Balance calculation includes child accounts
 
 ### Data Integrity
 - Transactions are immutable once created
-- All monetary amounts stored as integers (cents)
+- All monetary amounts stored as integers (amount_minor)
 - Strict foreign key constraints
 - Audit trail for all changes
 
@@ -125,12 +96,6 @@ sqlx database setup
 - Common account types: Compte courant, Livret A, PEA
 - Banks: BoursoBank, Société Générale, etc.
 - Future: Support for French tax categories
-
-## Performance Considerations
-- Target: <100ms for typical operations
-- Support: 10,000+ transactions efficiently
-- Database indexing strategy documented
-- Lazy loading for large datasets
 
 ## Testing Strategy
 - Unit tests: Core business logic (wallet-core)
@@ -163,7 +128,7 @@ sqlx database setup
 - Workspace-level versioning (shared version across crates)
 - Tauri configuration in `tauri.conf.json`
 - Database migrations in `wallet-core/migrations/`
-- Vue components in `wallet-tauri/src-ui/src/components/`
+- Vue components in `wallet-tauri/src/components/`
 - Automatic backup before migrations
 - Configuration in platform-specific directories (XDG, AppSupport)
 
