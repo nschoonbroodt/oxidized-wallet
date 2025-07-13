@@ -237,6 +237,10 @@ impl AccountService {
         self.repository.get_account_tree().await
     }
 
+    pub async fn get_account_tree_filtered(&self, include_inactive: bool) -> Result<Vec<AccountNode>> {
+        self.repository.get_account_tree_filtered(include_inactive).await
+    }
+
     pub async fn get_account(&self, id: i64) -> Result<Account> {
         self.repository.get_by_id(id).await
     }

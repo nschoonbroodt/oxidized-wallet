@@ -65,6 +65,19 @@ pub async fn get_account_tree(state: State<'_, AppState>) -> Result<Vec<AccountN
 
 #[tauri::command]
 #[specta::specta]
+pub async fn get_account_tree_filtered(
+    state: State<'_, AppState>,
+    include_inactive: bool,
+) -> Result<Vec<AccountNode>, String> {
+    let account_service = wallet_core::AccountService::new(state.db.clone());
+    match account_service.get_account_tree_filtered(include_inactive).await {
+        Ok(tree) => Ok(tree),
+        Err(e) => Err(format!("Failed to get account tree: {}", e)),
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn get_transactions(
     state: State<'_, AppState>,
     filters: TransactionFilters,

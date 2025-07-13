@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { commands, unwrapResult } from "@/services/api";
 import type { Account, AccountNode, Money } from "@/bindings";
 import AccountForm from "@/components/AccountForm.vue";
@@ -39,7 +39,10 @@ const fetchAccounts = async () => {
   error.value = null;
 
   try {
-    const result = await commands.getAccountTree();
+    // Use the filtered version if we need to show inactive accounts
+    const result = showInactive.value 
+      ? await commands.getAccountTreeFiltered(true)
+      : await commands.getAccountTree();
     const nodes = unwrapResult(result);
     accountNodes.value = nodes;
     
@@ -154,6 +157,11 @@ const cancelDeactivateAccount = () => {
   accountToDeactivate.value = null;
   deactivateError.value = null;
 };
+
+// Watch for showInactive changes and refetch accounts
+watch(showInactive, () => {
+  fetchAccounts();
+});
 
 onMounted(() => {
   fetchAccounts();

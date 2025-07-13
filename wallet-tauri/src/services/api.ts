@@ -317,6 +317,34 @@ const mockCommands = {
     
     return { status: "ok", data: undefined };
   },
+
+  async getAccountTreeFiltered(includeInactive: boolean): Promise<Result<AccountNode[], string>> {
+    await delay(10);
+    
+    // Build tree structure from mock data (depth-first traversal)
+    const buildTree = (parentId: bigint | null = null, level: number = 0, path: string = ""): AccountNode[] => {
+      return mockAccounts
+        .filter(acc => acc.parent_id === parentId)
+        .filter(acc => includeInactive || acc.is_active) // Filter based on includeInactive parameter
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .flatMap(account => {
+          const nodePath = path ? `${path} > ${account.name}` : account.name;
+          const node: AccountNode = {
+            account,
+            level,
+            path: nodePath
+          };
+          
+          // Get children recursively
+          const children = buildTree(account.id!, level + 1, nodePath);
+          
+          // Return this node followed by its children
+          return [node, ...children];
+        });
+    };
+
+    return { status: "ok", data: buildTree() };
+  },
 };
 
 // Extend Tauri commands with new functions (until bindings are regenerated)
@@ -334,6 +362,14 @@ const extendedTauriCommands = isTauri() ? {
     try {
       await (window as any).__TAURI_INTERNALS__.invoke("deactivate_account", { accountId });
       return { status: "ok", data: undefined };
+    } catch (error) {
+      return { status: "error", error: String(error) };
+    }
+  },
+  async getAccountTreeFiltered(includeInactive: boolean): Promise<Result<AccountNode[], string>> {
+    try {
+      const data = await (window as any).__TAURI_INTERNALS__.invoke("get_account_tree_filtered", { includeInactive });
+      return { status: "ok", data };
     } catch (error) {
       return { status: "error", error: String(error) };
     }
