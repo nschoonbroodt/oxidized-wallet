@@ -118,7 +118,7 @@ impl AccountRepository {
         };
 
         let full_query = format!(
-            "{} 
+            "{query} 
                 CASE account_type 
                     WHEN 'Asset' THEN 1 
                     WHEN 'Liability' THEN 2 
@@ -126,8 +126,7 @@ impl AccountRepository {
                     WHEN 'Income' THEN 4 
                     WHEN 'Expense' THEN 5 
                 END,
-                path",
-            query
+                path"
         );
 
         let nodes: Vec<AccountNode> = sqlx::query_as(&full_query).fetch_all(&self.db.pool).await?;
