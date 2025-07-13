@@ -28,6 +28,8 @@ pub fn run() {
         commands::get_current_month_income,
         commands::get_current_month_expenses,
         commands::get_recent_transactions,
+        commands::update_account,
+        commands::deactivate_account,
     ]);
     #[cfg(debug_assertions)]
     {

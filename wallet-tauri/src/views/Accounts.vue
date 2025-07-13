@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { commands, unwrapResult } from "@/services/api";
 import type { Account, AccountNode, Money } from "@/bindings";
 import AccountForm from "@/components/AccountForm.vue";
+import AccountEditDialog from "@/components/AccountEditDialog.vue";
 
 const accountNodes = ref<AccountNode[]>([]);
 const balances = ref<Map<bigint, Money>>(new Map());
@@ -11,6 +12,14 @@ const loading = ref<boolean>(false);
 const loadingBalances = ref<boolean>(false);
 const error = ref<string | null>(null);
 const showForm = ref(false);
+const showInactive = ref(false);
+const editingAccount = ref<Account | null>(null);
+const showEditDialog = ref(false);
+
+// Computed property to get all accounts for parent lookup
+const allAccounts = computed(() => {
+  return accountNodes.value.map(node => node.account);
+});
 
 const fetchAccounts = async () => {
   loading.value = true;
@@ -83,6 +92,44 @@ const onAccountCreated = (_newAccount: Account) => {
   fetchAccounts(); // Refresh tree from server
 };
 
+const editAccount = (account: Account) => {
+  editingAccount.value = account;
+  showEditDialog.value = true;
+};
+
+const onAccountEdited = (_updatedAccount: Account) => {
+  showEditDialog.value = false;
+  editingAccount.value = null;
+  fetchAccounts(); // Refresh tree from server
+};
+
+const closeEditDialog = () => {
+  showEditDialog.value = false;
+  editingAccount.value = null;
+};
+
+const deactivateAccount = async (account: Account) => {
+  if (!account.id) return;
+  
+  const confirmMessage = `Deactivate account "${account.name}"?\n\nThis will:\n• Hide the account from normal views\n• Preserve all transaction history\n• Prevent new transactions\n\nNote: You cannot deactivate accounts with child accounts.`;
+  
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    const result = await commands.deactivateAccount(account.id);
+    unwrapResult(result);
+    
+    // Refresh accounts to reflect the change
+    await fetchAccounts();
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    alert(`Failed to deactivate account: ${errorMessage}`);
+    console.error('Failed to deactivate account:', e);
+  }
+};
+
 onMounted(() => {
   fetchAccounts();
 });
@@ -92,12 +139,22 @@ onMounted(() => {
   <div class="h-full p-6">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-bold">Accounts</h1>
-      <button
-        @click="showForm = !showForm"
-        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-      >
-        {{ showForm ? "Cancel" : "New Account" }}
-      </button>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            v-model="showInactive"
+            class="rounded"
+          />
+          Show inactive accounts
+        </label>
+        <button
+          @click="showForm = !showForm"
+          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+        >
+          {{ showForm ? "Cancel" : "New Account" }}
+        </button>
+      </div>
     </div>
 
     <!-- New Account Form -->
@@ -113,24 +170,59 @@ onMounted(() => {
       <div class="space-y-1">
         <div
           v-for="node in accountNodes"
+          v-show="showInactive || node.account.is_active"
           :key="node.account.id?.toString()"
           :style="{ paddingLeft: `${node.level * 1.5}rem` }"
-          class="py-3 px-4 border rounded bg-white hover:bg-gray-50 transition-colors"
+          :class="[
+            'py-3 px-4 border rounded transition-colors',
+            node.account.is_active 
+              ? 'bg-white hover:bg-gray-50' 
+              : 'bg-gray-100 border-gray-300'
+          ]"
         >
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-2">
-                <span class="font-medium">{{ node.account.name }}</span>
+                <span 
+                  :class="[
+                    'font-medium',
+                    !node.account.is_active && 'italic text-gray-500'
+                  ]"
+                >
+                  {{ node.account.name }}
+                  <span v-if="!node.account.is_active" class="text-xs">(Inactive)</span>
+                </span>
                 <span class="text-sm text-gray-500"
                   >({{ node.account.account_type }})</span
                 >
               </div>
               <div
                 v-if="node.account.description"
-                class="text-sm text-gray-600 mt-1"
+                :class="[
+                  'text-sm mt-1',
+                  node.account.is_active ? 'text-gray-600' : 'text-gray-400'
+                ]"
               >
                 {{ node.account.description }}
               </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2 ml-4" v-if="node.account.id && node.account.is_active">
+              <button
+                @click="editAccount(node.account)"
+                class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                title="Edit account"
+              >
+                Edit
+              </button>
+              <button
+                @click="deactivateAccount(node.account)"
+                class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                title="Deactivate account"
+              >
+                Deactivate
+              </button>
             </div>
             
             <!-- Balance Information -->
@@ -178,5 +270,14 @@ onMounted(() => {
     >
       Refresh Accounts
     </button>
+
+    <!-- Account Edit Dialog -->
+    <AccountEditDialog
+      :account="editingAccount"
+      :all-accounts="allAccounts"
+      :is-open="showEditDialog"
+      @close="closeEditDialog"
+      @save="onAccountEdited"
+    />
   </div>
 </template>

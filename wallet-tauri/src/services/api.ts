@@ -258,10 +258,90 @@ const mockCommands = {
       data: recentTransactions,
     };
   },
+
+  async updateAccount(
+    accountId: bigint,
+    name: string,
+    description: string | null
+  ): Promise<Result<Account, string>> {
+    await delay(500);
+    
+    // Find the account to update
+    const accountIndex = mockAccounts.findIndex(acc => acc.id === accountId);
+    if (accountIndex === -1) {
+      return { status: "error", error: "Account not found" };
+    }
+    
+    // Validate name is not empty
+    if (!name.trim()) {
+      return { status: "error", error: "Account name cannot be empty" };
+    }
+    
+    // Update the account
+    const updatedAccount = {
+      ...mockAccounts[accountIndex],
+      name: name.trim(),
+      description: description,
+      updated_at: new Date().toISOString(),
+    };
+    
+    mockAccounts[accountIndex] = updatedAccount;
+    
+    return { status: "ok", data: updatedAccount };
+  },
+
+  async deactivateAccount(accountId: bigint): Promise<Result<void, string>> {
+    await delay(300);
+    
+    // Find the account to deactivate
+    const accountIndex = mockAccounts.findIndex(acc => acc.id === accountId);
+    if (accountIndex === -1) {
+      return { status: "error", error: "Account not found" };
+    }
+    
+    // Check if account has children
+    const hasChildren = mockAccounts.some(acc => acc.parent_id === accountId);
+    if (hasChildren) {
+      return { 
+        status: "error", 
+        error: "Cannot deactivate account - it has child accounts" 
+      };
+    }
+    
+    // Deactivate the account
+    mockAccounts[accountIndex] = {
+      ...mockAccounts[accountIndex],
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    };
+    
+    return { status: "ok", data: undefined };
+  },
 };
 
+// Extend Tauri commands with new functions (until bindings are regenerated)
+const extendedTauriCommands = isTauri() ? {
+  ...tauriCommands,
+  async updateAccount(accountId: bigint, name: string, description: string | null): Promise<Result<Account, string>> {
+    try {
+      const data = await (window as any).__TAURI_INTERNALS__.invoke("update_account", { accountId, name, description });
+      return { status: "ok", data };
+    } catch (error) {
+      return { status: "error", error: String(error) };
+    }
+  },
+  async deactivateAccount(accountId: bigint): Promise<Result<void, string>> {
+    try {
+      await (window as any).__TAURI_INTERNALS__.invoke("deactivate_account", { accountId });
+      return { status: "ok", data: undefined };
+    } catch (error) {
+      return { status: "error", error: String(error) };
+    }
+  }
+} : mockCommands;
+
 // Export either real or mock commands based on environment
-export const commands = isTauri() ? tauriCommands : mockCommands;
+export const commands = extendedTauriCommands;
 
 // Helper to extract data from Result type
 export function unwrapResult<T>(result: Result<T, string>): T {
