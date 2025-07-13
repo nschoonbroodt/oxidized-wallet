@@ -52,7 +52,10 @@ impl AccountRepository {
         self.get_account_tree_filtered(false).await
     }
 
-    pub async fn get_account_tree_filtered(&self, include_inactive: bool) -> Result<Vec<AccountNode>> {
+    pub async fn get_account_tree_filtered(
+        &self,
+        include_inactive: bool,
+    ) -> Result<Vec<AccountNode>> {
         let query = if include_inactive {
             // Include all accounts (both active and inactive)
             r#"
@@ -127,9 +130,7 @@ impl AccountRepository {
             query
         );
 
-        let nodes: Vec<AccountNode> = sqlx::query_as(&full_query)
-            .fetch_all(&self.db.pool)
-            .await?;
+        let nodes: Vec<AccountNode> = sqlx::query_as(&full_query).fetch_all(&self.db.pool).await?;
         Ok(nodes)
     }
 
