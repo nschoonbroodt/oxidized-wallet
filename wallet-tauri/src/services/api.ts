@@ -10,7 +10,7 @@ const isTauri = () => window.__TAURI_INTERNALS__ !== undefined;
 // Mock implementation of commands
 const mockCommands = {
   async getAccounts(): Promise<Result<Account[], string>> {
-    await delay(300); // Simulate network delay
+    await delay(10); // Simulate network delay
 
     // Simulate occasional errors for testing
     if (Math.random() > 0.95) {
@@ -32,7 +32,7 @@ const mockCommands = {
     _description: string | null,
     _currency: string
   ): Promise<Result<Account, string>> {
-    await delay(500); // Simulate API delay
+    await delay(20); // Simulate API delay
 
     // Create new account with generated ID
     const newAccount: Account = {
@@ -53,7 +53,7 @@ const mockCommands = {
     return { status: "ok", data: newAccount };
   },
   async getAccountTree(): Promise<Result<AccountNode[], string>> {
-    await delay(300);
+    await delay(10);
     
     // Build tree structure from mock data (depth-first traversal)
     const buildTree = (parentId: bigint | null = null, level: number = 0, path: string = ""): AccountNode[] => {
@@ -218,7 +218,7 @@ const mockCommands = {
   },
   
   async getAccountBalance(_accountId: bigint): Promise<Result<Money, string>> {
-    await delay(200);
+    await delay(5);
     
     // Mock balance calculation - in reality this would sum transactions
     const balanceAmount = BigInt(Math.floor(Math.random() * 10000) * 100); // Random balance
@@ -233,7 +233,7 @@ const mockCommands = {
   },
   
   async getAccountBalanceWithChildren(_accountId: bigint): Promise<Result<Money, string>> {
-    await delay(300);
+    await delay(10);
     
     // Mock hierarchical balance - slightly higher than individual balance
     const balanceAmount = BigInt(Math.floor(Math.random() * 15000) * 100);
@@ -258,10 +258,126 @@ const mockCommands = {
       data: recentTransactions,
     };
   },
+
+  async updateAccount(
+    accountId: bigint,
+    name: string,
+    description: string | null
+  ): Promise<Result<Account, string>> {
+    await delay(15);
+    
+    // Find the account to update
+    const accountIndex = mockAccounts.findIndex(acc => acc.id === accountId);
+    if (accountIndex === -1) {
+      return { status: "error", error: "Account not found" };
+    }
+    
+    // Validate name is not empty
+    if (!name.trim()) {
+      return { status: "error", error: "Account name cannot be empty" };
+    }
+    
+    // Update the account
+    const updatedAccount = {
+      ...mockAccounts[accountIndex],
+      name: name.trim(),
+      description: description,
+      updated_at: new Date().toISOString(),
+    };
+    
+    mockAccounts[accountIndex] = updatedAccount;
+    
+    return { status: "ok", data: updatedAccount };
+  },
+
+  async deactivateAccount(accountId: bigint): Promise<Result<void, string>> {
+    await delay(10);
+    
+    // Find the account to deactivate
+    const accountIndex = mockAccounts.findIndex(acc => acc.id === accountId);
+    if (accountIndex === -1) {
+      return { status: "error", error: "Account not found" };
+    }
+    
+    // Check if account has children
+    const hasChildren = mockAccounts.some(acc => acc.parent_id === accountId);
+    if (hasChildren) {
+      return { 
+        status: "error", 
+        error: "Cannot deactivate account - it has child accounts" 
+      };
+    }
+    
+    // Deactivate the account
+    mockAccounts[accountIndex] = {
+      ...mockAccounts[accountIndex],
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    };
+    
+    return { status: "ok", data: undefined };
+  },
+
+  async getAccountTreeFiltered(includeInactive: boolean): Promise<Result<AccountNode[], string>> {
+    await delay(10);
+    
+    // Build tree structure from mock data (depth-first traversal)
+    const buildTree = (parentId: bigint | null = null, level: number = 0, path: string = ""): AccountNode[] => {
+      return mockAccounts
+        .filter(acc => acc.parent_id === parentId)
+        .filter(acc => includeInactive || acc.is_active) // Filter based on includeInactive parameter
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .flatMap(account => {
+          const nodePath = path ? `${path} > ${account.name}` : account.name;
+          const node: AccountNode = {
+            account,
+            level,
+            path: nodePath
+          };
+          
+          // Get children recursively
+          const children = buildTree(account.id!, level + 1, nodePath);
+          
+          // Return this node followed by its children
+          return [node, ...children];
+        });
+    };
+
+    return { status: "ok", data: buildTree() };
+  },
 };
 
+// Extend Tauri commands with new functions (until bindings are regenerated)
+const extendedTauriCommands = isTauri() ? {
+  ...tauriCommands,
+  async updateAccount(accountId: bigint, name: string, description: string | null): Promise<Result<Account, string>> {
+    try {
+      const data = await (window as any).__TAURI_INTERNALS__.invoke("update_account", { accountId, name, description });
+      return { status: "ok", data };
+    } catch (error) {
+      return { status: "error", error: String(error) };
+    }
+  },
+  async deactivateAccount(accountId: bigint): Promise<Result<void, string>> {
+    try {
+      await (window as any).__TAURI_INTERNALS__.invoke("deactivate_account", { accountId });
+      return { status: "ok", data: undefined };
+    } catch (error) {
+      return { status: "error", error: String(error) };
+    }
+  },
+  async getAccountTreeFiltered(includeInactive: boolean): Promise<Result<AccountNode[], string>> {
+    try {
+      const data = await (window as any).__TAURI_INTERNALS__.invoke("get_account_tree_filtered", { includeInactive });
+      return { status: "ok", data };
+    } catch (error) {
+      return { status: "error", error: String(error) };
+    }
+  }
+} : mockCommands;
+
 // Export either real or mock commands based on environment
-export const commands = isTauri() ? tauriCommands : mockCommands;
+export const commands = extendedTauriCommands;
 
 // Helper to extract data from Result type
 export function unwrapResult<T>(result: Result<T, string>): T {

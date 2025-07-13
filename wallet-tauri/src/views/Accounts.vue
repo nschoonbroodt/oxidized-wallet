@@ -1,8 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import { commands, unwrapResult } from "@/services/api";
 import type { Account, AccountNode, Money } from "@/bindings";
 import AccountForm from "@/components/AccountForm.vue";
+import AccountEditDialog from "@/components/AccountEditDialog.vue";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const accountNodes = ref<AccountNode[]>([]);
 const balances = ref<Map<bigint, Money>>(new Map());
@@ -11,13 +22,33 @@ const loading = ref<boolean>(false);
 const loadingBalances = ref<boolean>(false);
 const error = ref<string | null>(null);
 const showForm = ref(false);
+const showInactive = ref(false);
+const editingAccount = ref<Account | null>(null);
+const showEditDialog = ref(false);
+const accountToDeactivate = ref<Account | null>(null);
+const showDeactivateDialog = ref(false);
+const deactivateError = ref<string | null>(null);
+const generalError = ref<string | null>(null);
+
+// Computed property to get all accounts for parent lookup
+const allAccounts = computed(() => {
+  return accountNodes.value.map(node => node.account);
+});
+
+// Check if an account is a top-level account (no parent)
+const isTopLevelAccount = (account: Account): boolean => {
+  return account.parent_id === null;
+};
 
 const fetchAccounts = async () => {
   loading.value = true;
   error.value = null;
 
   try {
-    const result = await commands.getAccountTree();
+    // Use the filtered version if we need to show inactive accounts
+    const result = showInactive.value 
+      ? await commands.getAccountTreeFiltered(true)
+      : await commands.getAccountTree();
     const nodes = unwrapResult(result);
     accountNodes.value = nodes;
     
@@ -83,6 +114,74 @@ const onAccountCreated = (_newAccount: Account) => {
   fetchAccounts(); // Refresh tree from server
 };
 
+const editAccount = (account: Account) => {
+  editingAccount.value = account;
+  showEditDialog.value = true;
+};
+
+const onAccountEdited = (_updatedAccount: Account) => {
+  showEditDialog.value = false;
+  editingAccount.value = null;
+  fetchAccounts(); // Refresh tree from server
+};
+
+const closeEditDialog = () => {
+  showEditDialog.value = false;
+  editingAccount.value = null;
+};
+
+const deactivateAccount = (account: Account) => {
+  // Clear any previous general errors
+  generalError.value = null;
+  
+  // Prevent deactivation of top-level accounts (Assets, Liabilities, etc.)
+  if (isTopLevelAccount(account)) {
+    generalError.value = "Cannot deactivate top-level accounts (Assets, Liabilities, Equity, Income, Expenses). These are fundamental account types required for double-entry bookkeeping.";
+    // Auto-clear error after 5 seconds
+    setTimeout(() => {
+      generalError.value = null;
+    }, 5000);
+    return;
+  }
+  
+  accountToDeactivate.value = account;
+  deactivateError.value = null;
+  showDeactivateDialog.value = true;
+};
+
+const confirmDeactivateAccount = async () => {
+  const account = accountToDeactivate.value;
+  if (!account?.id) return;
+
+  try {
+    const result = await commands.deactivateAccount(account.id);
+    unwrapResult(result);
+    
+    // Close dialog and refresh accounts
+    showDeactivateDialog.value = false;
+    accountToDeactivate.value = null;
+    deactivateError.value = null;
+    
+    // Refresh accounts to reflect the change
+    await fetchAccounts();
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    deactivateError.value = `Failed to deactivate account: ${errorMessage}`;
+    console.error('Failed to deactivate account:', e);
+  }
+};
+
+const cancelDeactivateAccount = () => {
+  showDeactivateDialog.value = false;
+  accountToDeactivate.value = null;
+  deactivateError.value = null;
+};
+
+// Watch for showInactive changes and refetch accounts
+watch(showInactive, () => {
+  fetchAccounts();
+});
+
 onMounted(() => {
   fetchAccounts();
 });
@@ -92,12 +191,33 @@ onMounted(() => {
   <div class="h-full p-6">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-2xl font-bold">Accounts</h1>
-      <button
-        @click="showForm = !showForm"
-        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-      >
-        {{ showForm ? "Cancel" : "New Account" }}
-      </button>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            v-model="showInactive"
+            class="rounded"
+          />
+          Show inactive accounts
+        </label>
+        <button
+          @click="showForm = !showForm"
+          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+        >
+          {{ showForm ? "Cancel" : "New Account" }}
+        </button>
+      </div>
+    </div>
+
+    <!-- General Error Display -->
+    <div v-if="generalError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+      <div class="flex items-center">
+        <svg class="w-4 h-4 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <span class="text-red-700 text-sm">{{ generalError }}</span>
+      </div>
     </div>
 
     <!-- New Account Form -->
@@ -113,24 +233,66 @@ onMounted(() => {
       <div class="space-y-1">
         <div
           v-for="node in accountNodes"
+          v-show="showInactive || node.account.is_active"
           :key="node.account.id?.toString()"
           :style="{ paddingLeft: `${node.level * 1.5}rem` }"
-          class="py-3 px-4 border rounded bg-white hover:bg-gray-50 transition-colors"
+          :class="[
+            'py-3 px-4 border rounded transition-colors',
+            node.account.is_active 
+              ? 'bg-white hover:bg-gray-50' 
+              : 'bg-gray-100 border-gray-300'
+          ]"
         >
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-2">
-                <span class="font-medium">{{ node.account.name }}</span>
+                <span 
+                  :class="[
+                    'font-medium',
+                    !node.account.is_active && 'italic text-gray-500'
+                  ]"
+                >
+                  {{ node.account.name }}
+                  <span v-if="!node.account.is_active" class="text-xs">(Inactive)</span>
+                </span>
                 <span class="text-sm text-gray-500"
                   >({{ node.account.account_type }})</span
                 >
               </div>
               <div
                 v-if="node.account.description"
-                class="text-sm text-gray-600 mt-1"
+                :class="[
+                  'text-sm mt-1',
+                  node.account.is_active ? 'text-gray-600' : 'text-gray-400'
+                ]"
               >
                 {{ node.account.description }}
               </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-1 ml-4" v-if="node.account.id && node.account.is_active">
+              <button
+                @click="editAccount(node.account)"
+                class="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                title="Edit account"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button
+                v-if="!isTopLevelAccount(node.account)"
+                @click="deactivateAccount(node.account)"
+                class="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                title="Deactivate account"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              </button>
             </div>
             
             <!-- Balance Information -->
@@ -178,5 +340,52 @@ onMounted(() => {
     >
       Refresh Accounts
     </button>
+
+    <!-- Account Edit Dialog -->
+    <AccountEditDialog
+      :account="editingAccount"
+      :all-accounts="allAccounts"
+      :is-open="showEditDialog"
+      @close="closeEditDialog"
+      @save="onAccountEdited"
+    />
+
+    <!-- Account Deactivate Confirmation Dialog -->
+    <AlertDialog :open="showDeactivateDialog" @update:open="showDeactivateDialog = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Deactivate Account</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to deactivate account "{{ accountToDeactivate?.name }}"?
+            
+            <div class="mt-3 space-y-2">
+              <div class="text-sm">This will:</div>
+              <ul class="text-sm list-disc list-inside space-y-1 ml-2">
+                <li>Hide the account from normal views</li>
+                <li>Preserve all transaction history</li>
+                <li>Prevent new transactions</li>
+              </ul>
+              <div class="text-sm text-orange-600 mt-2">
+                <strong>Note:</strong> You cannot deactivate accounts with child accounts.
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        
+        <div v-if="deactivateError" class="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+          {{ deactivateError }}
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="cancelDeactivateAccount">Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            @click="confirmDeactivateAccount"
+            class="bg-red-600 hover:bg-red-700"
+          >
+            Deactivate
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

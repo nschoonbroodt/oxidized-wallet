@@ -48,7 +48,45 @@ impl AccountRepository {
     }
 
     pub async fn get_account_tree(&self) -> Result<Vec<AccountNode>> {
-        let nodes: Vec<AccountNode> = sqlx::query_as(
+        // Delegate to the filtered version with default behavior (active only)
+        self.get_account_tree_filtered(false).await
+    }
+
+    pub async fn get_account_tree_filtered(
+        &self,
+        include_inactive: bool,
+    ) -> Result<Vec<AccountNode>> {
+        let query = if include_inactive {
+            // Include all accounts (both active and inactive)
+            r#"
+            WITH RECURSIVE account_tree AS (
+                -- Base case: root accounts
+                SELECT 
+                    id, name, account_type, parent_id, currency, description, 
+                    is_active, created_at, updated_at,
+                    0 as level, 
+                    name as path
+                FROM accounts 
+                WHERE parent_id IS NULL
+                
+                UNION ALL
+                
+                -- Recursive case: children  
+                SELECT 
+                    a.id, a.name, a.account_type, a.parent_id, a.currency, 
+                    a.description, a.is_active, a.created_at, a.updated_at,
+                    t.level + 1, 
+                    t.path || ' > ' || a.name
+                FROM accounts a
+                JOIN account_tree t ON a.parent_id = t.id
+            )
+            SELECT 
+                id, name, account_type, parent_id, currency, description, 
+                is_active, created_at, updated_at, level, path
+            FROM account_tree 
+            ORDER BY"#
+        } else {
+            // Only active accounts (current behavior)
             r#"
             WITH RECURSIVE account_tree AS (
                 -- Base case: root accounts
@@ -76,19 +114,22 @@ impl AccountRepository {
                 id, name, account_type, parent_id, currency, description, 
                 is_active, created_at, updated_at, level, path
             FROM account_tree 
-            ORDER BY 
+            ORDER BY"#
+        };
+
+        let full_query = format!(
+            "{query} 
                 CASE account_type 
-                    WHEN 'asset' THEN 1 
-                    WHEN 'liability' THEN 2 
-                    WHEN 'equity' THEN 3 
-                    WHEN 'income' THEN 4 
-                    WHEN 'expense' THEN 5 
+                    WHEN 'Asset' THEN 1 
+                    WHEN 'Liability' THEN 2 
+                    WHEN 'Equity' THEN 3 
+                    WHEN 'Income' THEN 4 
+                    WHEN 'Expense' THEN 5 
                 END,
-                path
-            "#,
-        )
-        .fetch_all(&self.db.pool)
-        .await?;
+                path"
+        );
+
+        let nodes: Vec<AccountNode> = sqlx::query_as(&full_query).fetch_all(&self.db.pool).await?;
         Ok(nodes)
     }
 

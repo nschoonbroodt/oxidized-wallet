@@ -18,6 +18,7 @@ pub fn run() {
         commands::get_accounts,
         commands::create_account,
         commands::get_account_tree,
+        commands::get_account_tree_filtered,
         commands::get_transactions,
         commands::get_transaction,
         commands::create_simple_transaction,
@@ -28,6 +29,8 @@ pub fn run() {
         commands::get_current_month_income,
         commands::get_current_month_expenses,
         commands::get_recent_transactions,
+        commands::update_account,
+        commands::deactivate_account,
     ]);
     #[cfg(debug_assertions)]
     {
