@@ -24,7 +24,7 @@ const error = ref<string | null>(null)
 const parentAccountName = computed(() => {
   if (!props.account?.parent_id || !props.allAccounts) return 'Root Account'
   
-  const parent = props.allAccounts.find(acc => acc.id === props.account.parent_id)
+  const parent = props.allAccounts.find(acc => acc.id === props.account!.parent_id)
   return parent ? parent.name : 'Unknown Parent'
 })
 
@@ -46,6 +46,11 @@ const handleSubmit = async () => {
     return
   }
 
+  if (!props.account.id) {
+    error.value = 'Account ID is missing'
+    return
+  }
+
   isSubmitting.value = true
   error.value = null
 
@@ -53,7 +58,7 @@ const handleSubmit = async () => {
     const { commands, unwrapResult } = await import('@/services/api')
     
     const result = await commands.updateAccount(
-      props.account.id!,
+      props.account.id,
       name.value.trim(),
       description.value.trim() || null
     )

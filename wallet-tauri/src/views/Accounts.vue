@@ -4,6 +4,16 @@ import { commands, unwrapResult } from "@/services/api";
 import type { Account, AccountNode, Money } from "@/bindings";
 import AccountForm from "@/components/AccountForm.vue";
 import AccountEditDialog from "@/components/AccountEditDialog.vue";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const accountNodes = ref<AccountNode[]>([]);
 const balances = ref<Map<bigint, Money>>(new Map());
@@ -15,6 +25,9 @@ const showForm = ref(false);
 const showInactive = ref(false);
 const editingAccount = ref<Account | null>(null);
 const showEditDialog = ref(false);
+const accountToDeactivate = ref<Account | null>(null);
+const showDeactivateDialog = ref(false);
+const deactivateError = ref<string | null>(null);
 
 // Computed property to get all accounts for parent lookup
 const allAccounts = computed(() => {
@@ -108,26 +121,38 @@ const closeEditDialog = () => {
   editingAccount.value = null;
 };
 
-const deactivateAccount = async (account: Account) => {
-  if (!account.id) return;
-  
-  const confirmMessage = `Deactivate account "${account.name}"?\n\nThis will:\n• Hide the account from normal views\n• Preserve all transaction history\n• Prevent new transactions\n\nNote: You cannot deactivate accounts with child accounts.`;
-  
-  if (!confirm(confirmMessage)) {
-    return;
-  }
+const deactivateAccount = (account: Account) => {
+  accountToDeactivate.value = account;
+  deactivateError.value = null;
+  showDeactivateDialog.value = true;
+};
+
+const confirmDeactivateAccount = async () => {
+  const account = accountToDeactivate.value;
+  if (!account?.id) return;
 
   try {
     const result = await commands.deactivateAccount(account.id);
     unwrapResult(result);
     
+    // Close dialog and refresh accounts
+    showDeactivateDialog.value = false;
+    accountToDeactivate.value = null;
+    deactivateError.value = null;
+    
     // Refresh accounts to reflect the change
     await fetchAccounts();
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    alert(`Failed to deactivate account: ${errorMessage}`);
+    deactivateError.value = `Failed to deactivate account: ${errorMessage}`;
     console.error('Failed to deactivate account:', e);
   }
+};
+
+const cancelDeactivateAccount = () => {
+  showDeactivateDialog.value = false;
+  accountToDeactivate.value = null;
+  deactivateError.value = null;
 };
 
 onMounted(() => {
@@ -208,20 +233,26 @@ onMounted(() => {
             </div>
             
             <!-- Action Buttons -->
-            <div class="flex items-center gap-2 ml-4" v-if="node.account.id && node.account.is_active">
+            <div class="flex items-center gap-1 ml-4" v-if="node.account.id && node.account.is_active">
               <button
                 @click="editAccount(node.account)"
-                class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                class="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                 title="Edit account"
               >
-                Edit
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
               </button>
               <button
                 @click="deactivateAccount(node.account)"
-                class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                class="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
                 title="Deactivate account"
               >
-                Deactivate
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
               </button>
             </div>
             
@@ -279,5 +310,43 @@ onMounted(() => {
       @close="closeEditDialog"
       @save="onAccountEdited"
     />
+
+    <!-- Account Deactivate Confirmation Dialog -->
+    <AlertDialog :open="showDeactivateDialog" @update:open="showDeactivateDialog = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Deactivate Account</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to deactivate account "{{ accountToDeactivate?.name }}"?
+            
+            <div class="mt-3 space-y-2">
+              <div class="text-sm">This will:</div>
+              <ul class="text-sm list-disc list-inside space-y-1 ml-2">
+                <li>Hide the account from normal views</li>
+                <li>Preserve all transaction history</li>
+                <li>Prevent new transactions</li>
+              </ul>
+              <div class="text-sm text-orange-600 mt-2">
+                <strong>Note:</strong> You cannot deactivate accounts with child accounts.
+              </div>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        
+        <div v-if="deactivateError" class="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+          {{ deactivateError }}
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="cancelDeactivateAccount">Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            @click="confirmDeactivateAccount"
+            class="bg-red-600 hover:bg-red-700"
+          >
+            Deactivate
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

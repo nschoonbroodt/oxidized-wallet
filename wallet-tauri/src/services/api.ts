@@ -10,7 +10,7 @@ const isTauri = () => window.__TAURI_INTERNALS__ !== undefined;
 // Mock implementation of commands
 const mockCommands = {
   async getAccounts(): Promise<Result<Account[], string>> {
-    await delay(300); // Simulate network delay
+    await delay(10); // Simulate network delay
 
     // Simulate occasional errors for testing
     if (Math.random() > 0.95) {
@@ -32,7 +32,7 @@ const mockCommands = {
     _description: string | null,
     _currency: string
   ): Promise<Result<Account, string>> {
-    await delay(500); // Simulate API delay
+    await delay(20); // Simulate API delay
 
     // Create new account with generated ID
     const newAccount: Account = {
@@ -53,7 +53,7 @@ const mockCommands = {
     return { status: "ok", data: newAccount };
   },
   async getAccountTree(): Promise<Result<AccountNode[], string>> {
-    await delay(300);
+    await delay(10);
     
     // Build tree structure from mock data (depth-first traversal)
     const buildTree = (parentId: bigint | null = null, level: number = 0, path: string = ""): AccountNode[] => {
@@ -218,7 +218,7 @@ const mockCommands = {
   },
   
   async getAccountBalance(_accountId: bigint): Promise<Result<Money, string>> {
-    await delay(200);
+    await delay(5);
     
     // Mock balance calculation - in reality this would sum transactions
     const balanceAmount = BigInt(Math.floor(Math.random() * 10000) * 100); // Random balance
@@ -233,7 +233,7 @@ const mockCommands = {
   },
   
   async getAccountBalanceWithChildren(_accountId: bigint): Promise<Result<Money, string>> {
-    await delay(300);
+    await delay(10);
     
     // Mock hierarchical balance - slightly higher than individual balance
     const balanceAmount = BigInt(Math.floor(Math.random() * 15000) * 100);
@@ -264,7 +264,7 @@ const mockCommands = {
     name: string,
     description: string | null
   ): Promise<Result<Account, string>> {
-    await delay(500);
+    await delay(15);
     
     // Find the account to update
     const accountIndex = mockAccounts.findIndex(acc => acc.id === accountId);
@@ -291,7 +291,7 @@ const mockCommands = {
   },
 
   async deactivateAccount(accountId: bigint): Promise<Result<void, string>> {
-    await delay(300);
+    await delay(10);
     
     // Find the account to deactivate
     const accountIndex = mockAccounts.findIndex(acc => acc.id === accountId);
