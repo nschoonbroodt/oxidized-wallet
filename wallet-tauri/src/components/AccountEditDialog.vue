@@ -28,6 +28,11 @@ const parentAccountName = computed(() => {
   return parent ? parent.name : 'Unknown Parent'
 })
 
+// Check if this is a top-level account (Assets, Liabilities, Equity, Income, Expenses)
+const isTopLevelAccount = computed(() => {
+  return props.account?.parent_id === null
+})
+
 // Watch for account changes to populate form
 watch(() => props.account, (newAccount) => {
   if (newAccount) {
@@ -125,6 +130,21 @@ const handleClose = () => {
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             :disabled="isSubmitting"
           />
+          
+          <!-- Warning for top-level account name changes -->
+          <div v-if="isTopLevelAccount" class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div class="flex items-start">
+              <svg class="w-4 h-4 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div class="text-yellow-700 text-sm">
+                <strong>Warning:</strong> You are editing a fundamental account type ({{ account?.account_type }}). 
+                While technically possible, changing these names is generally discouraged as they represent 
+                core accounting categories. Consider this carefully unless you're adapting the interface language.
+              </div>
+            </div>
+          </div>
         </div>
         
         <!-- Description (editable) -->

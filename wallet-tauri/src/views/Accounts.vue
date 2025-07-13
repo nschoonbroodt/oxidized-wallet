@@ -28,11 +28,17 @@ const showEditDialog = ref(false);
 const accountToDeactivate = ref<Account | null>(null);
 const showDeactivateDialog = ref(false);
 const deactivateError = ref<string | null>(null);
+const generalError = ref<string | null>(null);
 
 // Computed property to get all accounts for parent lookup
 const allAccounts = computed(() => {
   return accountNodes.value.map(node => node.account);
 });
+
+// Check if an account is a top-level account (no parent)
+const isTopLevelAccount = (account: Account): boolean => {
+  return account.parent_id === null;
+};
 
 const fetchAccounts = async () => {
   loading.value = true;
@@ -125,6 +131,19 @@ const closeEditDialog = () => {
 };
 
 const deactivateAccount = (account: Account) => {
+  // Clear any previous general errors
+  generalError.value = null;
+  
+  // Prevent deactivation of top-level accounts (Assets, Liabilities, etc.)
+  if (isTopLevelAccount(account)) {
+    generalError.value = "Cannot deactivate top-level accounts (Assets, Liabilities, Equity, Income, Expenses). These are fundamental account types required for double-entry bookkeeping.";
+    // Auto-clear error after 5 seconds
+    setTimeout(() => {
+      generalError.value = null;
+    }, 5000);
+    return;
+  }
+  
   accountToDeactivate.value = account;
   deactivateError.value = null;
   showDeactivateDialog.value = true;
@@ -187,6 +206,17 @@ onMounted(() => {
         >
           {{ showForm ? "Cancel" : "New Account" }}
         </button>
+      </div>
+    </div>
+
+    <!-- General Error Display -->
+    <div v-if="generalError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+      <div class="flex items-center">
+        <svg class="w-4 h-4 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <span class="text-red-700 text-sm">{{ generalError }}</span>
       </div>
     </div>
 
@@ -253,6 +283,7 @@ onMounted(() => {
                 </svg>
               </button>
               <button
+                v-if="!isTopLevelAccount(node.account)"
                 @click="deactivateAccount(node.account)"
                 class="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
                 title="Deactivate account"
